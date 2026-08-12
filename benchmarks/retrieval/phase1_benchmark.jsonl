@@ -1,0 +1,5 @@
+{"query": "NDVI vegetation health", "gold_ids": [], "reference_answer": "", "expected_abstain": false, "metadata": {"gold_substring": "NDVI measures vegetation health", "source": "rs_notes.md"}}
+{"query": "Sentinel-1 SAR flood detection", "gold_ids": [], "reference_answer": "", "expected_abstain": false, "metadata": {"gold_substring": "Sentinel-1 SAR amplifies the water signal", "source": "rs_notes.md"}}
+{"query": "change detection time series differencing", "gold_ids": [], "reference_answer": "", "expected_abstain": false, "metadata": {"gold_substring": "Time-series differencing of NDVI", "source": "rs_notes.md"}}
+{"query": "normalized difference vegetation index function", "gold_ids": [], "reference_answer": "", "expected_abstain": false, "metadata": {"gold_substring": "normalized difference vegetation index", "source": "ndvi.py"}}
+{"query": "crop stress analysis notebook", "gold_ids": [], "reference_answer": "", "expected_abstain": false, "metadata": {"gold_substring": "Crop Stress Analysis", "source": "analysis.ipynb"}}
