@@ -1,15 +1,17 @@
-"""OLMoEarth v1.2 Nano vision embedder (torch-native).
+"""OLMoEarth v1.2 Nano vision embedder (torch-native, via olmoearth_pretrain).
 
-Loads a native PyTorch ``weights.pth`` state dict directly — no llama.cpp,
-no GGUF conversion, no JVM. The encoder architecture is inferred from the
-checkpoint keys (see ``_infer_config_from_state_dict``), matching the reference
-implementation in the user's benchmark project.
+Loads a native PyTorch checkpoint (``config.json`` + ``weights.pth``) using the
+official ``olmoearth_pretrain`` model loader. The architecture is the full
+multi-modal FlexiViT encoder from the OLMoEarth pretraining codebase — not a
+reconstruction — so weights load correctly and embeddings are meaningful.
+
+The ``vision_path`` should point to a **directory** containing ``config.json``
+and ``weights.pth``. If ``config.json`` is absent, it is downloaded from
+HuggingFace (``allenai/OlmoEarth-v1_2-Nano``) on first load.
 """
 
 from __future__ import annotations
 
-import re
-from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -18,275 +20,195 @@ import numpy as np
 from geomemory.core.exceptions import ModelNotLoadedError
 from geomemory.embeddings.normalization import l2_normalize
 
-
-class _PatchEmbed:
-    """Per-modality patch embedding: pixel_proj + linear proj."""
-
-    def __init__(self, in_channels: int, embed_dim: int = 768, out_dim: int = 128) -> None:
-        import torch.nn as nn
-
-        self.pixel_proj = nn.Linear(in_channels, in_channels)
-        self.proj = nn.Linear(embed_dim, out_dim)
-
-    def forward(self, x: Any) -> Any:
-        if x.dim() == 5:
-            x = x.squeeze(-1).squeeze(-1)
-        x = self.pixel_proj(x)
-        if x.shape[-1] < 768:
-            import torch
-
-            pad = torch.zeros(*x.shape[:-1], 768 - x.shape[-1], device=x.device)
-            x = torch.cat([x, pad], dim=-1)
-        x = self.proj(x)
-        return x
-
-    __call__ = forward
-
-
-class _TransformerBlock:
-    """Standard transformer block with pre-norm."""
-
-    def __init__(self, dim: int = 128, heads: int = 4, mlp_ratio: float = 4.0) -> None:
-        import torch.nn as nn
-
-        self.norm1 = nn.LayerNorm(dim)
-        self.attn = nn.MultiheadAttention(dim, heads, batch_first=True)
-        self.norm2 = nn.LayerNorm(dim)
-        self.mlp = nn.Sequential(
-            nn.Linear(dim, int(dim * mlp_ratio)),
-            nn.GELU(),
-            nn.Linear(int(dim * mlp_ratio), dim),
-        )
-
-    def forward(self, x: Any) -> Any:
-        h = self.norm1(x)
-        h, _ = self.attn(h, h, h)
-        x = x + h
-        x = x + self.mlp(self.norm2(x))
-        return x
-
-    __call__ = forward
-
-
-def _infer_config_from_state_dict(
-    state_dict: dict[str, Any],
-) -> tuple[int, int, dict[str, int] | None]:
-    """Infer dim, n_blocks, and modality_configs from checkpoint keys."""
-    dim = None
-    n_blocks = 0
-    modality_configs: dict[str, int] = {}
-
-    for k, v in state_dict.items():
-        if k.startswith("encoder."):
-            k = k[len("encoder."):]
-        if re.match(r"blocks\.\d+\.norm1\.weight$", k):
-            n_blocks += 1
-            dim = v.shape[0]
-        match = re.match(r"patch_embeddings\.(.+)\.pixel_proj\.weight$", k)
-        if match:
-            name = match.group(1)
-            in_ch = v.shape[1]
-            modality_configs[name] = in_ch
-
-    if dim is None:
-        raise ValueError("Cannot infer model dim from state_dict — no blocks.*.norm1.weight found")
-    if n_blocks == 0:
-        n_blocks = 4
-    return dim, n_blocks, modality_configs or None
-
-
-class _OlmoEarthEncoder:
-    """Minimal OLMoEarth encoder built from state_dict keys.
-
-    Manually tracks parameters (does not subclass ``torch.nn.Module``) so the
-    architecture can be built dynamically from checkpoint keys. Provides a
-    ``load_state_dict`` that distributes tensors into submodules.
-    """
-
-    def __init__(
-        self,
-        dim: int = 128,
-        n_blocks: int = 4,
-        modality_configs: dict[str, int] | None = None,
-    ) -> None:
-        import torch
-        import torch.nn as nn
-
-        self.dim = dim
-        if modality_configs is None:
-            modality_configs = {
-                "sentinel2_l2a": 12,
-                "sentinel1": 2,
-                "landsat": 11,
-                "worldcover": 1,
-                "srtm": 1,
-                "openstreetmap_raster": 30,
-                "wri_canopy_height_map": 1,
-                "cdl": 1,
-                "worldcereal": 8,
-            }
-        self.modality_configs = modality_configs
-        self.patch_embeddings: dict[str, _PatchEmbed] = {}
-        for name, in_ch in modality_configs.items():
-            self.patch_embeddings[name] = _PatchEmbed(in_ch, 768, dim)
-        import torch
-
-        self.composite_encodings = nn.Parameter(torch.randn(1, 1, dim) * 0.02)
-        self.blocks: list[_TransformerBlock] = [_TransformerBlock(dim) for _ in range(n_blocks)]
-        self.norm = nn.LayerNorm(dim)
-        self.project_and_aggregate = nn.Sequential(nn.Linear(dim, dim))
-
-    def load_state_dict(self, state_dict: dict[str, Any], strict: bool = True) -> None:
-        """Distribute state-dict tensors into this encoder's submodules."""
-        all_params: dict[str, Any] = {}
-        for name, module in self.patch_embeddings.items():
-            for k, v in module.__dict__.get("_params", {}).items():
-                all_params[f"patch_embeddings.{name}.{k}"] = v
-        for k, v in self.__dict__.get("_params", {}).items():
-            all_params[k] = v
-        for i, block in enumerate(self.blocks):
-            for k, v in block.__dict__.get("_params", {}).items():
-                all_params[f"blocks.{i}.{k}"] = v
-        for k, v in self.norm.__dict__.get("_params", {}).items():
-            all_params[f"norm.{k}"] = v
-        for k, v in self.project_and_aggregate.__dict__.get("_params", {}).items():
-            all_params[f"project_and_aggregate.{k}"] = v
-
-        if strict:
-            missing = set(all_params.keys()) - set(state_dict.keys())
-            unexpected = set(state_dict.keys()) - set(all_params.keys())
-            if missing or unexpected:
-                return
-        for k, v in state_dict.items():
-            if k in all_params:
-                all_params[k] = v
-
-    def __call__(self, x: Any, modality: str = "sentinel2_l2a") -> Any:
-        return self.forward(x, modality=modality)
-
-    def forward(self, x: Any, modality: str = "sentinel2_l2a") -> Any:
-        import torch
-
-        if modality not in self.patch_embeddings:
-            modality = next(iter(self.patch_embeddings))
-        if x.shape[-1] == 13:
-            x = torch.cat([x[:, :, :8], x[:, :, 9:]], dim=-1)
-        h = self.patch_embeddings[modality](x)
-        h = h + self.composite_encodings
-        for block in self.blocks:
-            h = block(h)
-        h = self.norm(h)
-        h = h.mean(dim=1)
-        h = self.project_and_aggregate(h)
-        return h
-
-    @staticmethod
-    def from_state_dict(weights_path: str, device: str = "cpu") -> _OlmoEarthEncoder:
-        import torch
-
-        state_dict = torch.load(weights_path, map_location=device)
-        enc_keys = {k: v for k, v in state_dict.items() if k.startswith("encoder.")}
-        dim, n_blocks, modality_configs = _infer_config_from_state_dict(state_dict)
-        model = _OlmoEarthEncoder(dim=dim, n_blocks=n_blocks, modality_configs=modality_configs)
-        mapped = {k.replace("encoder.", "", 1): v for k, v in enc_keys.items()}
-        model.load_state_dict(mapped, strict=False)
-        return model
+# Sentinel-2 L2A has 12 bands — the primary spatial modality used for generic
+# multispectral / GeoTIFF inputs. Arbitrary channel counts are padded (or
+# truncated) to 12 before embedding.
+_TARGET_MODALITY = "sentinel2_l2a"
+_TARGET_CHANNELS = 12
 
 
 class OlmoEarthVisionEmbedder:
     """Torch-native OLMoEarth v1.2 Nano vision embedder.
 
-    Loads a native PyTorch ``weights.pth`` state dict directly. Accepts image
-    inputs (paths, bytes, or PIL images) and produces L2-normalized float32
-    embeddings in the ``image.olmoearth-nano-v12.v1`` space.
+    Loads a native PyTorch checkpoint via ``olmoearth_pretrain`` and produces
+    L2-normalized float32 embeddings in the ``image.olmoearth-nano-v12.v1``
+    space. Accepts image inputs (paths, bytes, or PIL images).
     """
 
     space_id = "image.olmoearth-nano-v12.v1"
 
     def __init__(self, vision_path: str, *, model_id: str = "olmoearth-nano-v1.2") -> None:
-        self.vision_path = vision_path
+        self.vision_path = Path(vision_path)
         self._model_id = model_id
-        self._model: _OlmoEarthEncoder | None = None
+        self._model: Any | None = None
+        self._model_dim: int = 128
 
     @property
     def model_id(self) -> str:
         return self._model_id
 
-    def _load(self) -> _OlmoEarthEncoder:
+    def _load(self) -> Any:
+        if self._model is not None:
+            return self._model
 
-        if self._model is None:
-            path = Path(self.vision_path)
-            if not path.is_file():
-                raise ModelNotLoadedError(
-                    f"Vision model checkpoint not found: {self.vision_path}",
-                    hint=self.vision_path,
-                )
-            try:
-                self._model = _OlmoEarthEncoder.from_state_dict(str(path), device="cpu")
-            except FileNotFoundError as exc:
-                raise ModelNotLoadedError(
-                    f"Vision model checkpoint not found: {self.vision_path}",
-                    hint=self.vision_path,
-                ) from exc
-            except (RuntimeError, ValueError) as exc:
-                raise ModelNotLoadedError(
-                    f"Failed to load vision model from {self.vision_path}: {exc}",
-                    hint=self.vision_path,
-                ) from exc
+        if not self.vision_path.exists():
+            raise ModelNotLoadedError(
+                f"Vision model path not found: {self.vision_path}",
+                hint=str(self.vision_path),
+            )
+
+        try:
+            import torch
+            from olmoearth_pretrain.config import Config  # type: ignore[import-not-found]
+        except ImportError as exc:  # pragma: no cover - depends on extra
+            raise ModelNotLoadedError(
+                "The 'vision' extra is required for OLMoEarth embeddings. "
+                "Install with: pip install 'geomemory[vision]'",
+                hint="pip install 'geomemory[vision]'",
+            ) from exc
+
+        # Resolve model directory + weights file.
+        # Accepts either a directory (config.json + weights.pth) or a direct
+        # .pth file path (per the vision-embedding spec).
+        if self.vision_path.is_file():
+            weights_path = self.vision_path
+            model_dir = self.vision_path.parent
+        else:
+            weights_path = self.vision_path / "weights.pth"
+            model_dir = self.vision_path
+
+        if not weights_path.is_file():
+            raise ModelNotLoadedError(
+                f"Vision model weights not found: {weights_path}",
+                hint=str(weights_path),
+            )
+
+        config_path = model_dir / "config.json"
+        if not config_path.is_file():
+            self._download_config(config_path)
+
+        try:
+            import json
+
+            with config_path.open() as f:
+                config_dict = json.load(f)
+            # Patch legacy configs that predate use_linear_patch_embed.
+            enc = config_dict.get("model", {}).get("encoder_config", {})
+            if isinstance(enc, dict) and "use_linear_patch_embed" not in enc:
+                config_dict["model"]["encoder_config"]["use_linear_patch_embed"] = False
+            model_config = Config.from_dict(config_dict["model"])
+            model = model_config.build()
+            state_dict = torch.load(str(weights_path), map_location="cpu")
+            model.load_state_dict(state_dict)
+        except (RuntimeError, ValueError, OSError) as exc:
+            raise ModelNotLoadedError(
+                f"Failed to load vision model from {weights_path}: {exc}",
+                hint=str(weights_path),
+            ) from exc
+
+        self._model = model
+        self._model.eval()
         return self._model
 
-    def _to_tensor(self, images: Sequence[Any]) -> tuple[Any, str]:
-        """Convert image inputs to a (N, T, C) tensor and target modality."""
-        import torch
+    @staticmethod
+    def _download_config(config_path: Path) -> None:
+        """Download the OLMoEarth-v1_2-Nano config.json from HuggingFace."""
+        try:
+            from huggingface_hub import hf_hub_download
+
+            downloaded = hf_hub_download("allenai/OlmoEarth-v1_2-Nano", "config.json")
+            import shutil
+
+            shutil.copy(downloaded, config_path)
+        except Exception as exc:  # noqa: BLE001
+            raise ModelNotLoadedError(
+                f"config.json missing at {config_path} and could not be "
+                f"downloaded from HuggingFace: {exc}",
+                hint=str(config_path),
+            ) from exc
+
+    def _to_modality_tensor(self, image: Any) -> np.ndarray:
+        """Convert one image input to a (H, W, C) float32 array."""
         from PIL import Image
 
-        arrays: list[np.ndarray] = []
-        for image in images:
-            if isinstance(image, (str, Path)):
-                pil = Image.open(image).convert("RGB")
-            elif isinstance(image, (bytes, bytearray, memoryview)):
-                pil = Image.open(bytes(image)).convert("RGB")
-            elif isinstance(image, Image.Image):
-                pil = image.convert("RGB")
-            else:
-                raise TypeError(f"Unsupported image type: {type(image).__name__}")
-            arr = np.asarray(pil, dtype=np.float32) / 255.0
-            h, w, c = arr.shape
-            arrays.append(arr.reshape(h * w, c))
+        if isinstance(image, (str, Path)):
+            img = Image.open(image).convert("RGB")
+        elif isinstance(image, (bytes, bytearray, memoryview)):
+            img = Image.open(bytes(image)).convert("RGB")
+        elif isinstance(image, Image.Image):
+            img = image.convert("RGB")
+        elif isinstance(image, np.ndarray):
+            arr = image.astype(np.float32)
+            if arr.ndim == 2:  # single-channel -> replicate to RGB
+                arr = np.stack([arr, arr, arr], axis=-1)
+            if arr.max() > 1.0:
+                arr = arr / 255.0
+            img = Image.fromarray((arr * 255).clip(0, 255).astype(np.uint8))
+        else:
+            raise TypeError(f"Unsupported image type: {type(image).__name__}")
 
-        n = len(arrays)
-        max_t = max(a.shape[0] for a in arrays)
-        c = arrays[0].shape[1]
-        padded = np.zeros((n, max_t, c), dtype=np.float32)
-        for i, a in enumerate(arrays):
-            padded[i, : a.shape[0], :] = a
+        # The encoder expects fixed-size tiles (trained on 128x128). Large images
+        # would explode the token count, so we resize the longest side to 128.
+        max_side = 128
+        if max(img.size) > max_side:
+            img = img.resize((max_side, max_side))
 
-        tensor = torch.from_numpy(padded)
-        modality = self._match_modality(c)
-        return tensor, modality
+        arr = np.asarray(img, dtype=np.float32)
+        # Normalize to [0, 1] regardless of input scale (8-bit, float GeoTIFF, etc.)
+        # via per-image min-max. This keeps the embedding invariant to absolute
+        # radiometric scale and focuses on spatial/spectral patterns.
+        lo, hi = arr.min(), arr.max()
+        arr = (arr - lo) / (hi - lo) if hi - lo > 1e-8 else np.zeros_like(arr)
 
-    def _match_modality(self, channels: int) -> str:
-        """Find a modality matching the input channel count, or the first available."""
-        model = self._load()
-        for name, in_ch in model.modality_configs.items():
-            if in_ch == channels:
-                return name
-        return next(iter(model.patch_embeddings))
+        return arr
 
-    def embed_images(self, images: Sequence[Any]) -> np.ndarray:
-        """Embed a sequence of images, returning an (N, D) L2-normalized float32 array."""
+    def embed_images(self, images: Any) -> np.ndarray:
+        """Embed a sequence of images, returning an (N, D) L2-normalized array."""
         import torch
-
+        from olmoearth_pretrain.datatypes import (  # type: ignore[import-not-found]
+            MaskedOlmoEarthSample,
+            MaskValue,
+        )
         if not images:
-            return np.zeros((0, self._load().dim), dtype=np.float32)
+            return np.zeros((0, self._model_dim), dtype=np.float32)
 
-        tensor, modality = self._to_tensor(images)
         model = self._load()
+
+        # Convert each image to a padded/truncated (H, W, 12) tensor.
+        tensors: list[torch.Tensor] = []
+        for image in images:
+            arr = self._to_modality_tensor(image)  # (H, W, C)
+            h, w, c = arr.shape
+            if c < _TARGET_CHANNELS:
+                padded = np.zeros((h, w, _TARGET_CHANNELS), dtype=np.float32)
+                padded[:, :, :c] = arr
+            else:
+                padded = arr[:, :, :_TARGET_CHANNELS]
+            # (H, W, 12) -> (1, H, W, T=1, 12)
+            t = torch.from_numpy(padded).unsqueeze(0).unsqueeze(-2)
+            tensors.append(t)
+
+        batch = torch.cat(tensors, dim=0)  # (N, H, W, 1, 12)
+        n = batch.shape[0]
+        mask = torch.full(
+            (n, *batch.shape[1:]), MaskValue.ONLINE_ENCODER.value, dtype=torch.long
+        )
+        timestamps = torch.zeros((n, 1, 3), dtype=torch.long)
+
+        sample = MaskedOlmoEarthSample(
+            timestamps=timestamps,
+            sentinel2_l2a=batch,
+            sentinel2_l2a_mask=mask,
+        )
+
         with torch.inference_mode():
-            output = model(tensor, modality=modality)
-        vectors = output.detach().cpu().numpy().astype(np.float32)
+            out = model.encoder(sample, patch_size=8)
+
+        # project_aggregated holds the pooled embedding
+        pa = out["project_aggregated"]
+        vectors = pa.detach().cpu().numpy().astype(np.float32)
         return l2_normalize(vectors)
 
-    def embed_texts(self, texts: Sequence[str]) -> np.ndarray | None:
+    def embed_texts(self, texts: Any) -> np.ndarray | None:
         """OLMoEarth nano is image-embedding only; returns None."""
         return None

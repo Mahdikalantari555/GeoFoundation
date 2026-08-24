@@ -58,6 +58,7 @@ vector = [
 vision = [
     "torch>=2.0",
     "Pillow>=10.0",
+    "olmoearth-pretrain>=0.1.1",
 ]
 # OpenDataLoader PDF parsing (optional high-quality PDF backend)
 opendataloader = [

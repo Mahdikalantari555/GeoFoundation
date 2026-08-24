@@ -193,7 +193,16 @@ def doctor_vision(settings: WorkspaceSettings) -> dict[str, Any]:
         torch_installed = False
 
     vision_path = settings.vision_path
-    checkpoint_exists = Path(vision_path).is_file() if vision_path else False
+    # vision_path may be a directory (config.json + weights.pth) or a direct
+    # .pth file (per the vision-embedding spec).
+    if vision_path:
+        vp = Path(vision_path)
+        checkpoint_exists = (
+            vp.is_file()
+            or (vp.is_dir() and (vp / "weights.pth").is_file())
+        )
+    else:
+        checkpoint_exists = False
     return {
         "torch_installed": torch_installed,
         "vision_path": vision_path,
