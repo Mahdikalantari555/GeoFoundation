@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --gf-bg: oklch(0.985 0.002 250);
+  --gf-panel: oklch(1 0 0);
+  --gf-border: oklch(0.92 0.005 250);
+  --gf-text: oklch(0.21 0.03 255);
+  --gf-muted: oklch(0.52 0.02 255);
+  --gf-accent: oklch(0.55 0.14 250);
+  --gf-accent-soft: oklch(0.95 0.03 250);
+  --gf-ok: oklch(0.62 0.15 150);
+  --gf-warn: oklch(0.72 0.15 75);
+  --gf-err: oklch(0.58 0.19 25);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gf-bg: oklch(0.17 0.015 255);
+    --gf-panel: oklch(0.21 0.018 255);
+    --gf-border: oklch(0.28 0.02 255);
+    --gf-text: oklch(0.93 0.01 250);
+    --gf-muted: oklch(0.68 0.02 255);
+    --gf-accent: oklch(0.7 0.13 250);
+    --gf-accent-soft: oklch(0.26 0.04 255);
+    --gf-ok: oklch(0.72 0.14 150);
+    --gf-warn: oklch(0.78 0.13 75);
+    --gf-err: oklch(0.66 0.17 25);
+  }
+}
+
+body {
+  background: var(--gf-bg);
+  color: var(--gf-text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans',
+    'Vazirmatn', sans-serif;
+}
+
+@theme inline {
+  --color-gf-bg: var(--gf-bg);
+  --color-gf-panel: var(--gf-panel);
+  --color-gf-border: var(--gf-border);
+  --color-gf-text: var(--gf-text);
+  --color-gf-muted: var(--gf-muted);
+  --color-gf-accent: var(--gf-accent);
+  --color-gf-accent-soft: var(--gf-accent-soft);
+  --color-gf-ok: var(--gf-ok);
+  --color-gf-warn: var(--gf-warn);
+  --color-gf-err: var(--gf-err);
+}

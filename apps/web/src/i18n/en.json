@@ -1,0 +1,53 @@
+{
+  "common": {
+    "appName": "GeoFoundation",
+    "workspace": "Workspace",
+    "open": "Open",
+    "create": "Create",
+    "close": "Close",
+    "settings": "Settings",
+    "search": "Search",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "notFound": "Page not found"
+  },
+  "nav": {
+    "groupWorkspace": "Workspace",
+    "groupKnowledge": "Knowledge",
+    "groupAgent": "Agent",
+    "groupGeo": "Geo",
+    "overview": "Overview",
+    "settings": "Settings",
+    "doctor": "Doctor",
+    "collections": "Collections",
+    "ingest": "Ingest",
+    "searchPage": "Search",
+    "ask": "Ask",
+    "assets": "Assets",
+    "index": "Index",
+    "feedback": "Feedback & Review",
+    "eval": "Evaluation",
+    "agentChat": "Agent Chat",
+    "conversations": "Conversations",
+    "tools": "Tools",
+    "playbooks": "Playbooks",
+    "maps": "Maps",
+    "farms": "Farms"
+  },
+  "health": {
+    "gatewayUp": "Gateway online",
+    "gatewayDown": "Gateway offline",
+    "workspaceOpen": "Workspace open",
+    "workspaceClosed": "No workspace",
+    "llmConfigured": "LLM configured",
+    "llmMissing": "LLM key missing",
+    "version": "Version {{version}}"
+  },
+  "placeholder": {
+    "title": "Coming soon",
+    "body": "This page lands in an upcoming milestone."
+  }
+}

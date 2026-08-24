@@ -1,0 +1,53 @@
+{
+  "common": {
+    "appName": "جئوفاندیشن",
+    "workspace": "فضای کاری",
+    "open": "باز کردن",
+    "create": "ایجاد",
+    "close": "بستن",
+    "settings": "تنظیمات",
+    "search": "جستجو",
+    "save": "ذخیره",
+    "cancel": "انصراف",
+    "loading": "در حال بارگذاری…",
+    "error": "خطایی رخ داد",
+    "retry": "تلاش دوباره",
+    "notFound": "صفحه یافت نشد"
+  },
+  "nav": {
+    "groupWorkspace": "فضای کاری",
+    "groupKnowledge": "دانش",
+    "groupAgent": "دستیار",
+    "groupGeo": "جغرافیا",
+    "overview": "نمای کلی",
+    "settings": "تنظیمات",
+    "doctor": "عیب‌یابی",
+    "collections": "مجموعه‌ها",
+    "ingest": "ورود داده",
+    "searchPage": "جستجو",
+    "ask": "پرسش",
+    "assets": "دارایی‌ها",
+    "index": "نمایه",
+    "feedback": "بازخورد و بازبینی",
+    "eval": "ارزیابی",
+    "agentChat": "گفتگو با دستیار",
+    "conversations": "گفتگوها",
+    "tools": "ابزارها",
+    "playbooks": "سناریوها",
+    "maps": "نقشه‌ها",
+    "farms": "مزارع"
+  },
+  "health": {
+    "gatewayUp": "دروازه برخط است",
+    "gatewayDown": "دروازه خاموش است",
+    "workspaceOpen": "فضای کاری باز است",
+    "workspaceClosed": "فضای کاری باز نیست",
+    "llmConfigured": "مدل زبانی پیکربندی شده",
+    "llmMissing": "کلید مدل زبانی موجود نیست",
+    "version": "نسخه {{version}}"
+  },
+  "placeholder": {
+    "title": "به‌زودی",
+    "body": "این صفحه در مرحله بعدی ساخته می‌شود."
+  }
+}

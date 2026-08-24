@@ -4,15 +4,15 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 
 ## M0 — Scaffold
 
-- [ ] Task: server skeleton (app factory, CORS, /health, error envelope, 409 workspace guard)
+- [x] Task: server skeleton (app factory, CORS, /health, error envelope, 409 workspace guard)
   - Acceptance: `GET /health` returns `{status, workspace: closed, llm}`; unknown route returns envelope
   - Verify: `conda run -n ai pytest server/tests -q`
   - Files: server/src/geofront_api/{main.py,state.py,schemas.py}, server/tests/test_health.py
-- [ ] Task: web scaffold (Vite+React+TS strict, Tailwind+shadcn init, router, app shell sidebar+header, i18n en/fa skeleton, health pill)
+- [x] Task: web scaffold (Vite+React+TS strict, Tailwind+shadcn init, router, app shell sidebar+header, i18n en/fa skeleton, health pill)
   - Acceptance: app boots, en↔fa flips dir, health pill polls gateway
   - Verify: `pnpm build && pnpm test`
   - Files: apps/web/**
-- [ ] Task: generated API client + SSE helper
+- [x] Task: generated API client + SSE helper
   - Acceptance: `pnpm gen:api` produces typed client from running gateway
   - Verify: build passes with client import
   - Files: apps/web/src/api/**
