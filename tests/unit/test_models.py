@@ -48,6 +48,32 @@ class TestWorkspaceSettings:
         assert "temperature" not in WorkspaceSettings.model_fields
         assert "max_tokens" not in WorkspaceSettings.model_fields
 
+    def test_llm_fields_defaults(self):
+        s = WorkspaceSettings(name="ws")
+        assert s.llm_provider is None
+        assert s.llm_api_base_url is None
+        assert s.llm_api_key_env == "GEOMEMORY_LLM_API_KEY"
+        assert s.llm_model_id == "kilo-auto/free"
+        assert s.llm_context_window == 32768
+
+    def test_llm_settings_roundtrip(self):
+        s = WorkspaceSettings(
+            name="ws",
+            llm_provider="api",
+            llm_api_base_url="https://api.kilo.ai/api/gateway/v1",
+            llm_model_id="kilo-auto/free",
+            llm_context_window=65536,
+        )
+        data = s.model_dump()
+        restored = WorkspaceSettings(**data)
+        assert restored == s
+
+    def test_context_window_out_of_range(self):
+        with pytest.raises(ValidationError):
+            WorkspaceSettings(name="ws", llm_context_window=100)
+        with pytest.raises(ValidationError):
+            WorkspaceSettings(name="ws", llm_context_window=999999)
+
 
 class TestCollection:
     def test_defaults(self):

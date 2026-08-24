@@ -12,6 +12,8 @@ from geomemory.core.models import (
     SearchHit,
     SearchRequest,
     SearchResult,
+    SpatialFilter,
+    TemporalFilter,
 )
 from geomemory.retrieval.deduplicator import deduplicate, enforce_diversity
 from geomemory.retrieval.fusion import linear_fuse, rrf_fuse
@@ -84,14 +86,9 @@ class SearchService:
 
         fused = deduplicate(fused)
         fused = enforce_diversity(fused, max_per_document=self.max_per_document)
-        fused = apply_spatial_filter(fused, filters.spatial)
-        fused = apply_temporal_filter(fused, filters.temporal)
-        if filters.sensors:
-            fused = [
-                hit
-                for hit in fused
-                if _hit_sensor(hit) is not None and _hit_sensor(hit) in filters.sensors
-            ]
+        fused = apply_hit_filters(
+            fused, spatial=filters.spatial, temporal=filters.temporal, sensors=filters.sensors
+        )
         fused = fused[:top_n]
 
         latency_ms = int((time.perf_counter() - start) * 1000)
@@ -113,7 +110,22 @@ class SearchService:
         )
 
 
-def _hit_sensor(hit: SearchHit) -> str | None:
+def apply_hit_filters(
+    hits: list[SearchHit],
+    *,
+    spatial: SpatialFilter | None = None,
+    temporal: TemporalFilter | None = None,
+    sensors: list[str] | None = None,
+) -> list[SearchHit]:
+    """Apply the canonical post-fusion filter chain: spatial → temporal → sensor."""
+    hits = apply_spatial_filter(hits, spatial)
+    hits = apply_temporal_filter(hits, temporal)
+    if sensors:
+        hits = [hit for hit in hits if hit_sensor(hit) is not None and hit_sensor(hit) in sensors]
+    return hits
+
+
+def hit_sensor(hit: SearchHit) -> str | None:
     """Return the sensor recorded on a hit, if any."""
     direct = hit.metadata.get("sensor")
     if direct:

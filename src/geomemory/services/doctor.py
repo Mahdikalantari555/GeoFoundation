@@ -7,20 +7,29 @@ environment, optional dependency availability, and workspace integrity.
 from __future__ import annotations
 
 import importlib
+import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
+from geomemory.core.models import WorkspaceSettings
+
 OPTIONAL_DEPS: list[tuple[str, str, str]] = [
     ("txtai", "txtai", "dense/sparse retrieval backend"),
     ("llama_cpp_python", "llama_cpp", "local GGUF LLM + embedding inference"),
+    ("sentence_transformers", "sentence_transformers",
+     "sentence-transformers dense text embeddings"),
+    ("qdrant_client", "qdrant_client", "Qdrant server-mode vector backend"),
     ("rasterio", "rasterio", "GeoTIFF reading"),
     ("shapely", "shapely", "geometry operations"),
     ("geopandas", "geopandas", "vector data reading"),
     ("PIL", "Pillow", "image previews/thumbnails"),
-    ("fitz", "PyMuPDF", "PDF parsing"),
+    ("fitz", "PyMuPDF", "PDF parsing (fallback)"),
+    ("opendataloader_pdf", "opendataloader-pdf", "high-quality PDF parsing (optional)"),
     ("docx", "python-docx", "DOCX parsing"),
     ("streamlit", "streamlit", "reference dashboard"),
+    ("torch", "torch", "OLMoEarth vision embeddings"),
 ]
 
 CORE_DEPS: list[tuple[str, str]] = [
@@ -82,8 +91,12 @@ def doctor_workspace(path: str | Path) -> dict[str, Any]:
         try:
             from geomemory.core.config import load_settings
 
-            load_settings(settings_path)
+            loaded = load_settings(settings_path)
             settings_ok = True
+            report["checks"]["llm_provider"] = doctor_llm_provider(loaded)
+            report["checks"]["qdrant"] = doctor_qdrant(loaded)
+            report["checks"]["pdf_parser"] = doctor_pdf_parser(loaded)
+            report["checks"]["vision"] = doctor_vision(loaded)
         except Exception:  # noqa: BLE001 - config parsing error
             settings_ok = False
     report["checks"]["settings_valid"] = settings_ok
@@ -108,8 +121,85 @@ def doctor_workspace(path: str | Path) -> dict[str, Any]:
 
     report["checks"]["objects_dir"] = (target / "objects").is_dir()
     report["checks"]["indexes_dir"] = (target / "indexes").is_dir()
+    report["checks"]["java_available"] = shutil.which("java") is not None
 
     return report
+
+
+def doctor_llm_provider(settings: WorkspaceSettings) -> dict[str, Any]:
+    """Report the resolved LLM provider configuration (no secret values)."""
+    key_env = settings.llm_api_key_env
+    return {
+        "provider": settings.llm_provider,
+        "model_id": settings.llm_model_id,
+        "api_base_url": settings.llm_api_base_url,
+        "key_env": key_env,
+        "key_set": bool(os.environ.get(key_env)),
+        "context_window": settings.llm_context_window,
+    }
+
+
+def doctor_qdrant(settings: WorkspaceSettings) -> dict[str, Any]:
+    """Report Qdrant client availability and, when configured, server reachability."""
+    client_installed = True
+    try:
+        importlib.import_module("qdrant_client")
+    except ImportError:
+        client_installed = False
+
+    info: dict[str, Any] = {"client_installed": client_installed, "url": settings.qdrant_url}
+
+    if settings.qdrant_url and client_installed:
+        try:
+            from qdrant_client import QdrantClient  # type: ignore[import-not-found]
+
+            client = QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key)
+            client.get_collections()
+            info["reachable"] = True
+        except Exception as exc:  # noqa: BLE001
+            info["reachable"] = False
+            info["error"] = str(exc)
+    return info
+
+
+def doctor_pdf_parser(settings: WorkspaceSettings) -> dict[str, Any]:
+    """Report the resolved PDF parser preference."""
+    try:
+        importlib.import_module("opendataloader_pdf")
+        odl_installed = True
+    except ImportError:
+        odl_installed = False
+    java = shutil.which("java") is not None
+    if settings.pdf_parser == "opendataloader":
+        resolved = "opendataloader"
+    elif settings.pdf_parser == "pymupdf":
+        resolved = "pymupdf"
+    else:
+        resolved = "opendataloader" if (odl_installed and java) else "pymupdf"
+    return {
+        "pdf_parser_setting": settings.pdf_parser,
+        "resolved": resolved,
+        "opendataloader_installed": odl_installed,
+        "java_available": java,
+    }
+
+
+def doctor_vision(settings: WorkspaceSettings) -> dict[str, Any]:
+    """Report vision model (torch + checkpoint) availability."""
+    try:
+        importlib.import_module("torch")
+        torch_installed = True
+    except ImportError:
+        torch_installed = False
+
+    vision_path = settings.vision_path
+    checkpoint_exists = Path(vision_path).is_file() if vision_path else False
+    return {
+        "torch_installed": torch_installed,
+        "vision_path": vision_path,
+        "vision_path_configured": vision_path is not None,
+        "checkpoint_exists": checkpoint_exists,
+    }
 
 
 def doctor_workspace_open(path: str | Path) -> dict[str, Any]:

@@ -2,12 +2,36 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from geomemory.core.models import WorkspaceSettings
+
+# Environment variables that override workspace settings when set.
+ENV_OVERRIDES: dict[str, str] = {
+    "GEOMEMORY_QDRANT_URL": "qdrant_url",
+    "GEOMEMORY_ST_MODEL": "st_model_name",
+    "GEOMEMORY_EMBEDDING_BACKEND": "embedding_backend",
+    "GEOMEMORY_VECTOR_BACKEND": "vector_backend",
+    "GEOMEMORY_VISION_PATH": "vision_path",
+}
+
+
+def _apply_env_overrides(settings: WorkspaceSettings) -> WorkspaceSettings:
+    """Return settings with documented environment overrides applied."""
+    changes: dict[str, Any] = {}
+    for env_var, field in ENV_OVERRIDES.items():
+        value = os.environ.get(env_var)
+        if value is not None:
+            changes[field] = value
+    if not changes:
+        return settings
+    merged = settings.model_dump()
+    merged.update(changes)
+    return WorkspaceSettings(**merged)
 
 
 def save_settings(path: str | Path, settings: WorkspaceSettings) -> None:
@@ -21,10 +45,11 @@ def save_settings(path: str | Path, settings: WorkspaceSettings) -> None:
 
 
 def load_settings(path: str | Path) -> WorkspaceSettings:
-    """Load settings from a YAML file."""
+    """Load settings from a YAML file, applying documented env overrides."""
     with Path(path).open("r", encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
-    return WorkspaceSettings(**data)
+    settings = WorkspaceSettings(**data)
+    return _apply_env_overrides(settings)
 
 
 def default_settings(name: str = "GeoMemory Workspace") -> WorkspaceSettings:

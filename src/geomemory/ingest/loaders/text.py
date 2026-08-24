@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from geomemory.core.models import ParsedObject, SourceRef
 from geomemory.ingest.loaders.base import mime_for_path, source_bytes

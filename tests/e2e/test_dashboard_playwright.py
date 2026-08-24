@@ -1,32 +1,58 @@
 """Playwright webapp tests for the GeoMemory Streamlit dashboard."""
+
 from __future__ import annotations
 
 import os
+import socket
 from pathlib import Path
 
+import pytest
 from playwright.sync_api import sync_playwright
 
 DASHBOARD_URL = os.environ.get("GEOMEMORY_DASH_URL", "http://localhost:8501")
 WORKSPACE_ROOT = os.environ.get("GEOMEMORY_TEST_WS", "/tmp/geomemory_dashboard_ws")
 
 
-def _resolve_brave() -> str:
-    """Resolve the newest installed Brave snap binary, falling back to a fixed path.
-
-    Playwright cannot download Chromium here (no sudo), so we drive the locally
-    installed Brave browser instead. Snap installs Brave under versioned dirs
-    like /snap/brave/664/...; pick the highest version to stay current.
-    """
+def _resolve_brave() -> str | None:
+    """Resolve a local chromium/brave browser executable, or None if unavailable."""
     import glob
 
+    # Try Brave snap first
     candidates = sorted(glob.glob("/snap/brave/*/opt/brave.com/brave/brave"), reverse=True)
     if candidates:
         return candidates[0]
     fixed = "/snap/brave/current/opt/brave.com/brave/brave"
-    return fixed
+    if Path(fixed).exists():
+        return fixed
+    # Fall back to system chromium
+    for candidate in ["/usr/bin/chromium-browser", "/usr/bin/chromium"]:
+        if Path(candidate).exists():
+            return candidate
+    return None
 
 
 BRAVE_PATH = _resolve_brave()
+
+
+def _dashboard_available() -> bool:
+    """Check if the dashboard server is reachable."""
+    try:
+        with socket.create_connection(("localhost", 8501), timeout=2):
+            return True
+    except Exception:
+        return False
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        BRAVE_PATH is None,
+        reason="no local chromium/brave browser executable found; skipping e2e dashboard test",
+    ),
+    pytest.mark.skipif(
+        not _dashboard_available(),
+        reason="dashboard server not running on localhost:8501; skipping e2e test",
+    ),
+]
 print(f"Using Brave at: {BRAVE_PATH}")
 ARTIFACTS = Path("/tmp/geomemory_playwright_artifacts")
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
@@ -50,7 +76,9 @@ def _wait_for_streamlit(page) -> None:
 
 def test_dashboard_loads_and_opens_workspace() -> None:
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, executable_path=BRAVE_PATH, args=["--no-sandbox"])
+        browser = p.chromium.launch(
+            headless=True, executable_path=BRAVE_PATH, args=["--no-sandbox"]
+        )
         context = browser.new_context(viewport={"width": 1440, "height": 1100})
         page = context.new_page()
         page.set_default_timeout(30_000)

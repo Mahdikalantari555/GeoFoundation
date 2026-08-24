@@ -24,10 +24,41 @@ Optional dependency groups:
 
 ```bash
 pip install -e ".[ai]"      # txtai + llama-cpp-python (retrieval/inference stack)
+pip install -e ".[st]"      # sentence-transformers (dense text embeddings)
+pip install -e ".[vector]"  # qdrant-client (server-mode vector backend)
 pip install -e ".[docs]"    # PDF/DOCX parsing
 pip install -e ".[rs]"      # rasterio/shapely/geopandas (remote sensing)
 pip install -e ".[ui]"      # Streamlit reference app
 ```
+
+## Settings
+
+Workspace settings are persisted in `workspace.yaml` and can be overridden via environment variables:
+
+| Variable | Setting | Default |
+|---|---|---|
+| `GEOMEMORY_QDRANT_URL` | `qdrant_url` | (unset = local backend) |
+| `GEOMEMORY_ST_MODEL` | `st_model_name` | `sentence-transformers/all-MiniLM-L6-v2` |
+| `GEOMEMORY_EMBEDDING_BACKEND` | `embedding_backend` | `hashing` |
+| `GEOMEMORY_VECTOR_BACKEND` | `vector_backend` | `local` |
+
+## Docker
+
+A multi-stage `Dockerfile` and `docker-compose.yml` package GeoMemory with Qdrant:
+
+- **CLI target** — installs the package plus AI/vector extras; entrypoint `geomemory`.
+- **UI target** — adds Streamlit and serves the reference app on port 8501.
+
+```bash
+docker build --target cli -t geomemory:cli .
+docker compose up
+```
+
+The compose stack starts Qdrant (named volume) and the UI, pre-wired so the app connects to Qdrant by service name. Volumes:
+
+- `qdrant_storage` — Qdrant data (survives recreation).
+- `workspace_data` — GeoMemory workspace.
+- `hf_cache` — Hugging Face model cache (avoids re-downloading the embedding model).
 
 ## Quickstart
 

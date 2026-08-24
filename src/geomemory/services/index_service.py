@@ -12,8 +12,9 @@ from __future__ import annotations
 import json
 import shutil
 import sqlite3
+import warnings
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -22,12 +23,17 @@ from geomemory.core.models import (
     IndexRecord,
     SearchHit,
     SearchRequest,
+    WorkspaceSettings,
 )
 from geomemory.embeddings.hashing_text import HashingTextEmbedder
 from geomemory.embeddings.llama_cpp_text import LlamaCppTextEmbedder
-from geomemory.index.manifest import create_manifest, write_manifest
+from geomemory.index.manifest import create_manifest, load_manifest, write_manifest
 from geomemory.index.vector_backend import VectorBackend
 from geomemory.storage.repositories.embedding_repo import EmbeddingRepository
+
+if TYPE_CHECKING:
+    from geomemory.embeddings.sentence_transformer import SentenceTransformerEmbedder
+    from geomemory.index.qdrant_backend import QdrantBackend
 
 
 class IndexService:
@@ -38,10 +44,12 @@ class IndexService:
         conn: sqlite3.Connection,
         index_dir: str | Path,
         *,
+        settings: WorkspaceSettings | None = None,
         batch_size: int = 64,
     ) -> None:
         self.conn = conn
         self.index_dir = Path(index_dir)
+        self._settings = settings
         self.batch_size = batch_size
 
     # ── Build / rebuild ──────────────────────────────────────────────────────
@@ -102,17 +110,23 @@ class IndexService:
                 )
                 vectors.append(vec)
 
-        # Merge into the persisted backend (or create a fresh one).
-        if VectorBackend.exists(backend_dir):
-            backend = VectorBackend.load(backend_dir, space_id=space_id)
+        if self._settings is not None and self._settings.vector_backend == "qdrant":
+            # Server-mode Qdrant backend: vectors live server-side, no disk save.
+            qdrant = self._qdrant_backend(space_id)
             if records:
-                backend.upsert(records, embeddings=np.stack(vectors))
+                qdrant.upsert(records, embeddings=np.stack(vectors))
+            qdrant.count()  # ensure reachable; raises on connection failure
         else:
-            backend = VectorBackend(space_id=space_id)
-            if records:
-                backend.upsert(records, embeddings=np.stack(vectors))
-
-        backend.save(backend_dir)
+            # Local on-disk backend (default).
+            if VectorBackend.exists(backend_dir):
+                backend: VectorBackend = VectorBackend.load(backend_dir, space_id=space_id)
+                if records:
+                    backend.upsert(records, embeddings=np.stack(vectors))
+            else:
+                backend = VectorBackend(space_id=space_id)
+                if records:
+                    backend.upsert(records, embeddings=np.stack(vectors))
+            backend.save(backend_dir)
 
         manifest = create_manifest(
             space_id=space_id,
@@ -144,15 +158,49 @@ class IndexService:
         top_k: int = 20,
         model_path: str | None = None,
     ) -> list[SearchHit]:
-        """Dense search over a persisted index.
+        """Dense search over a persisted or server-side index.
 
         Returns an empty list when no index exists for the space.
+        Routes to Qdrant when ``vector_backend`` is ``qdrant``; otherwise local.
         """
+        settings = self._settings
+        use_qdrant = (
+            settings is not None
+            and settings.vector_backend == "qdrant"
+            and settings.qdrant_url
+        )
+
+        if use_qdrant:
+            assert settings is not None
+            backend = self._qdrant_backend(space_id)
+            from geomemory.embeddings.sentence_transformer import (
+                SentenceTransformerEmbedder,
+            )
+
+            st_embedder = SentenceTransformerEmbedder(settings.st_model_name)
+            query_vec = st_embedder.embed_query([query])[0]
+            request = SearchRequest(
+                query=query,
+                query_embedding=query_vec,
+                mode="dense",
+                top_k=top_k,
+                top_n=top_k,
+            )
+            return backend.search(request)
+
         backend_dir = self.index_dir / space_id
         if not VectorBackend.exists(backend_dir):
             return []
-        backend = VectorBackend.load(backend_dir, space_id=space_id)
+        local_backend = VectorBackend.load(backend_dir, space_id=space_id)
         embedder = self._embedder(model_path)
+        manifest = load_manifest(backend_dir)
+        # Mismatch guard: warn if the query embedder differs from the one that built the index.
+        if manifest.model_id != embedder.model_id:
+            warnings.warn(
+                f"embedding model mismatch: index built with '{manifest.model_id}' "
+                f"but querying with '{embedder.model_id}'. Rebuild required for reliable results.",
+                stacklevel=2,
+            )
         query_vec = embedder.embed([query])[0]
         request = SearchRequest(
             query=query,
@@ -161,15 +209,68 @@ class IndexService:
             top_k=top_k,
             top_n=top_k,
         )
-        return backend.search(request)
+        return local_backend.search(request)
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
-    def _embedder(self, model_path: str | None) -> HashingTextEmbedder | LlamaCppTextEmbedder:
-        """Return the configured embedder, or the offline hashing embedder."""
+    def _embedder(
+        self, model_path: str | None
+    ) -> HashingTextEmbedder | LlamaCppTextEmbedder | SentenceTransformerEmbedder:
+        """Return the configured embedder based on workspace settings.
+
+        Dispatch order when ``self._settings`` is available:
+          - ``sentence-transformers``: lazy-imported ST embedder.
+          - ``llama-cpp`` / fallback when ``model_path`` is set: GGUF embedder.
+          - ``hashing`` / fallback: offline hashing embedder.
+        Falls back to the legacy (model_path ? llama-cpp : hashing) behavior when
+        no settings were supplied.
+        """
+        settings = self._settings
+        if settings is not None:
+            if settings.embedding_backend == "sentence-transformers":
+                return self._sentence_transformer_embedder(settings)
+            if settings.embedding_backend == "llama-cpp":
+                if model_path:
+                    return LlamaCppTextEmbedder(model_path)
+                return HashingTextEmbedder()
+            # hashing: offline default
+            return HashingTextEmbedder()
+        # Legacy fallback.
         if model_path:
             return LlamaCppTextEmbedder(model_path)
         return HashingTextEmbedder()
+
+    def _sentence_transformer_embedder(
+        self, settings: WorkspaceSettings
+    ) -> SentenceTransformerEmbedder:
+        """Lazily import and construct the sentence-transformers embedder."""
+        try:
+            from geomemory.embeddings.sentence_transformer import (
+                SentenceTransformerEmbedder,
+            )
+        except ImportError as exc:
+            raise ImportError(
+                "The sentence-transformers backend requires the optional "
+                "`sentence-transformers` package. Install it with "
+                "`pip install geomemory[st]`."
+            ) from exc
+        return SentenceTransformerEmbedder(settings.st_model_name)
+
+    def _qdrant_backend(self, space_id: str) -> QdrantBackend:
+        """Lazily import and construct the Qdrant backend for a space."""
+        try:
+            from geomemory.index.qdrant_backend import QdrantBackend
+        except ImportError as exc:
+            raise ImportError(
+                "The qdrant vector backend requires the optional `qdrant-client` "
+                "package. Install it with `pip install geomemory[vector]`."
+            ) from exc
+        settings = self._settings
+        return QdrantBackend(
+            space_id,
+            url=settings.qdrant_url if settings else None,
+            api_key=settings.qdrant_api_key if settings else None,
+        )
 
     def _load_segments(self) -> list[dict[str, Any]]:
         """Load all segments from SQLite with parsed JSON fields."""

@@ -19,7 +19,7 @@ Status: as-is, `main` @ `364b897`.
 | Unit | Responsibility |
 |---|---|
 | `loaders/base.py` | `Loader` protocol, `LoaderRegistry` |
-| `loaders/text.py · code.py · pdf.py · geojson.py · geotiff.py` | Text, AST-aware code, PDF (pymupdf), GeoJSON, GeoTIFF parsing → chunks + spatial payload |
+| `loaders/text.py · code.py · pdf.py · opendataloader_pdf.py · geojson.py · geotiff.py` | Text, AST-aware code, PDF (pymupdf + optional OpenDataLoader), GeoJSON, GeoTIFF parsing → chunks + spatial payload |
 | `chunkers/fixed_size.py · header_then_token.py` | Token-window chunking; heading-preserving chunking for documents |
 | `pipeline.py` | `IngestionPipeline.ingest_source()/ingest_batch()`: resolve loader → parse → attach spatial metadata → persist via repos |
 | `job_queue.py` | DB-backed `JobQueue`: submit/get/list/update/complete/fail/cancel/run |

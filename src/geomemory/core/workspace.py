@@ -39,18 +39,17 @@ from geomemory.core.models import (
     SearchRequest,
     SearchResult,
     Segment,
+    SourceRef,
     SpatialFilter,
     TemporalFilter,
-    VectorLayer,
     WorkspaceConfig,
     WorkspaceSettings,
 )
 from geomemory.core.models import (
     Workspace as WorkspaceModel,
 )
-from geomemory.retrieval.search_service import SearchService
-from geomemory.retrieval.spatial_filter import apply_spatial_filter
-from geomemory.retrieval.temporal_filter import apply_temporal_filter
+from geomemory.retrieval.fusion import rrf_fuse
+from geomemory.retrieval.search_service import SearchService, apply_hit_filters
 from geomemory.storage import connect, initialize, migrate, schema_sql
 from geomemory.storage.object_store import ObjectStore
 
@@ -261,6 +260,8 @@ class Workspace:
         spatial_payload: dict[str, Any] | None = None
         if kind in ("raster", "vector"):
             chunks, spatial_payload = self._parse_spatial_source(source_ref_path, kind)
+        elif mime_type == "application/pdf":
+            chunks = _chunk_pdf(raw, source_ref_path, self._settings)
         else:
             chunks = _chunk_document(raw, mime_type, source_ref_path, parser=parser)
 
@@ -443,13 +444,8 @@ class Workspace:
         if mode in ("dense", "hybrid"):
             dense_hits = self._dense_search(query, top_k=top_k, collections=collections)
 
-        fused = _rrf_fuse([sparse_hits, dense_hits], top_n=top_n)
-        fused = apply_spatial_filter(fused, spatial)
-        fused = apply_temporal_filter(fused, temporal)
-        if sensor:
-            fused = [
-                hit for hit in fused if _hit_sensor(hit) is not None and _hit_sensor(hit) in sensor
-            ]
+        fused = rrf_fuse([sparse_hits, dense_hits], top_n=top_n)
+        fused = apply_hit_filters(fused, spatial=spatial, temporal=temporal, sensors=sensor)
 
         latency_ms = int((time.perf_counter() - start) * 1000)
         run = RetrievalRun(
@@ -536,7 +532,10 @@ class Workspace:
             from geomemory.services.index_service import IndexService
 
             hits = IndexService(
-                self.conn, self.index_dir, batch_size=self.settings.batch_size
+                self.conn,
+                self.index_dir,
+                settings=self.settings,
+                batch_size=self.settings.batch_size,
             ).search(
                 query,
                 space_id=space_id,
@@ -597,24 +596,26 @@ class Workspace:
                 latency_ms=result.latency_ms,
                 model="none",
             )
-        model_path = self.settings.model_path
-        if not model_path:
+        # Grounded QA via the QA chat service (search → pack → generate → cite).
+        from geomemory.qa.backend_factory import LLMBackendUnavailableError, build_llm_backend
+        from geomemory.qa.chat_service import ChatService as QAChatService
+
+        try:
+            backend, token_budget = build_llm_backend(self.settings)
+        except LLMBackendUnavailableError as exc:
             return QAResult(
                 text="not found in selected sources",
                 abstained=True,
-                abstention_reason="No LLM backend configured (set model_path in workspace.yaml)",
+                abstention_reason=str(exc),
                 sources=result.hits,
                 retrieval_run_id=result.retrieval_run_id,
                 latency_ms=result.latency_ms,
                 model="none",
             )
-        # Grounded QA via the QA chat service (search → pack → generate → cite).
-        from geomemory.qa.chat_service import ChatService as QAChatService
-        from geomemory.qa.llama_cpp_backend import LlamaCppBackend
-
         chat = QAChatService(
             _WorkspaceSearchAdapter(self, collections=collections),
-            LlamaCppBackend(model_path),
+            backend,
+            token_budget=token_budget,
         )
         answer = chat.ask(question, mode=mode, filters=filters)
         self._persist_answer(question, answer)
@@ -694,7 +695,10 @@ class Workspace:
         from geomemory.services.index_service import IndexService
 
         service = IndexService(
-            self.conn, self.index_dir, batch_size=self.settings.batch_size
+            self.conn,
+            self.index_dir,
+            settings=self.settings,
+            batch_size=self.settings.batch_size,
         )
         service.build(space_id, model_path=self.settings.embedding_path)
         self._index_space = space_id
@@ -704,7 +708,10 @@ class Workspace:
         from geomemory.services.index_service import IndexService
 
         service = IndexService(
-            self.conn, self.index_dir, batch_size=self.settings.batch_size
+            self.conn,
+            self.index_dir,
+            settings=self.settings,
+            batch_size=self.settings.batch_size,
         )
         service.rebuild(space_id, model_path=self.settings.embedding_path)
         self._index_space = space_id
@@ -1107,40 +1114,52 @@ def _chunk_document(
     return chunks
 
 
+def _chunk_pdf(raw: bytes, source_path: str, settings: WorkspaceSettings) -> list[dict[str, Any]]:
+    """Parse a PDF via the configured parser and chunk with header awareness.
+
+    Falls back to PyMuPDF if the preferred parser (e.g. OpenDataLoader) fails
+    on a specific PDF, then to plain-text decoding as a last resort.
+    """
+    from geomemory.ingest.chunkers import default_registry
+    from geomemory.ingest.loaders import select_pdf_loader
+    from geomemory.ingest.loaders.pdf import PdfLoader
+
+    chunker_registry = default_registry()
+
+    source = SourceRef(path=source_path)
+    parsed_objects: list[ParsedObject] = []
+    try:
+        loader = select_pdf_loader(settings)
+        parsed_objects = list(loader.load(source))
+    except Exception:
+        # Preferred parser failed on this PDF; try PyMuPDF fallback.
+        try:
+            parsed_objects = list(PdfLoader().load(source))
+        except Exception:
+            pass
+    if not parsed_objects:
+        return []
+
+    chunker = chunker_registry.get("header_then_token")
+    if chunker is None:
+        from geomemory.ingest.chunkers.header_then_token import HeaderThenTokenChunker
+        chunker = HeaderThenTokenChunker()
+
+    chunks: list[dict[str, Any]] = []
+    for parsed in parsed_objects:
+        for draft in chunker.split(parsed):
+            chunks.append(
+                {
+                    "text": draft.text,
+                    "segment_type": draft.segment_type,
+                    "locator": draft.locator,
+                    "metadata": draft.metadata,
+                }
+            )
+    return chunks
+
+
 _FTS_TERM_RE = re.compile(r"[a-z0-9_]+", re.IGNORECASE)
-
-
-def _rrf_fuse(groups: list[list[SearchHit]], *, top_n: int, k: int = 60) -> list[SearchHit]:
-    """Reciprocal Rank Fusion over multiple ranked lists."""
-    scores: dict[str, float] = {}
-    by_id: dict[str, SearchHit] = {}
-    seen: dict[str, set[int]] = {}
-    for group_idx, group in enumerate(groups):
-        for rank, hit in enumerate(group):
-            key = hit.id
-            if key not in by_id:
-                by_id[key] = hit
-                seen[key] = set()
-            if group_idx not in seen[key]:
-                seen[key].add(group_idx)
-                scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
-    ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
-    for key, score in ranked:
-        by_id[key].score = score
-    return [by_id[k] for k, _ in ranked]
-
-
-def _hit_sensor(hit: SearchHit) -> str | None:
-    """Return the sensor recorded on a hit, if any."""
-    direct = hit.metadata.get("sensor")
-    if direct:
-        return str(direct)
-    spatial = hit.metadata.get("spatial")
-    if isinstance(spatial, dict):
-        sensor = spatial.get("sensor")
-        if sensor:
-            return str(sensor)
-    return None
 
 
 def _job_completed(job_type: str, result: dict[str, Any]) -> Job:

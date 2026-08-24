@@ -6,7 +6,7 @@ import ast
 import collections
 import io
 import tokenize
-from typing import Iterable
+from collections.abc import Iterable
 
 from geomemory.core.models import ParsedObject, SourceRef
 from geomemory.ingest.loaders.base import source_bytes
@@ -33,10 +33,7 @@ class CodeLoader:
         mime = "text/x-python" if source.path.endswith(".py") else "text/javascript"
 
         units: list[dict[str, str | int | None]] = []
-        if mime == "text/x-python":
-            units = _parse_python(text)
-        else:
-            units = _parse_js(text)
+        units = _parse_python(text) if mime == "text/x-python" else _parse_js(text)
 
         yield ParsedObject(
             source=source,

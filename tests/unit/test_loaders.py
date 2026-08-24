@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from geomemory.core.models import SourceRef
+import pytest
+
+from geomemory.core.models import SourceRef, WorkspaceSettings
 from geomemory.ingest.loaders import (
     CodeLoader,
     NotebookLoader,
     PdfLoader,
     TextLoader,
     get_loader,
+    select_pdf_loader,
 )
+from geomemory.ingest.loaders.base import java_available
 
 
 class TestTextLoader:
@@ -86,3 +90,32 @@ class TestGetLoader:
         p = tmp_path / "file.xyz"
         p.write_text("x")
         assert get_loader(SourceRef(path=str(p))) is None
+
+
+class TestJavaAvailable:
+    def test_detects_java(self):
+        import shutil
+        result = java_available()
+        assert result == (shutil.which("java") is not None)
+
+
+class TestSelectPdfLoader:
+    def test_pymupdf_preference_returns_pymupdf(self):
+        loader = select_pdf_loader(WorkspaceSettings(name="x", pdf_parser="pymupdf"))
+        assert isinstance(loader, PdfLoader)
+
+    def test_auto_picks_pymupdf_when_no_java(self, monkeypatch):
+        monkeypatch.setattr(
+            "geomemory.ingest.loaders.java_available", lambda: False
+        )
+        loader = select_pdf_loader()
+        assert isinstance(loader, PdfLoader)
+
+class TestOpenDataLoaderPdfFallback:
+    def test_unavailable_when_java_missing(self, monkeypatch):
+        from geomemory.ingest.loaders import opendataloader_pdf as odl_mod
+        from geomemory.ingest.loaders.opendataloader_pdf import OpenDataLoaderPdf
+        monkeypatch.setattr(odl_mod, "java_available", lambda: False)
+        loader = OpenDataLoaderPdf()
+        with pytest.raises(RuntimeError, match="Java"):
+            list(loader.load(SourceRef(path="tests/data/flood_report.pdf")))

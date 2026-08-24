@@ -169,6 +169,32 @@ class WorkspaceSettings(GeoMemoryModel):
     batch_size: int = 64
     thread_count: int = 4
 
+    # LLM provider selection (additive; unset preserves llama.cpp-only baseline).
+    llm_provider: Literal["llamacpp", "api"] | None = None
+    llm_api_base_url: str | None = None
+    llm_api_key_env: str = "GEOMEMORY_LLM_API_KEY"
+    llm_model_id: str = "kilo-auto/free"
+    llm_context_window: int = 32768
+
+    # Embedding backend selection (additive; unset preserves hashing/llama-cpp baseline).
+    embedding_backend: Literal["hashing", "llama-cpp", "sentence-transformers"] = "hashing"
+    st_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+
+    # Vector backend selection (additive; default 'local' preserves on-disk VectorBackend).
+    vector_backend: Literal["local", "qdrant"] = "local"
+    qdrant_url: str | None = None
+    qdrant_api_key: str | None = None
+
+    # PDF parser selection (auto = OpenDataLoader when Java+extra present, else PyMuPDF).
+    pdf_parser: Literal["auto", "opendataloader", "pymupdf"] = "auto"
+
+    @field_validator("llm_context_window")
+    @classmethod
+    def _validate_context_window(cls, v: int) -> int:
+        if v < 1024 or v > 200000:
+            raise ValueError("llm_context_window must be between 1024 and 200000")
+        return v
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Core entities

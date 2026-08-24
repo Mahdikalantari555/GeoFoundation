@@ -63,6 +63,12 @@ See [current-state/tech-debt.md](current-state/tech-debt.md) for full list. Top 
 4. missing direct tests (query_parser, deduplicator, job_queue, prompts, events, plugin_registry),
 5. DOCX dep without loader, 6. half-built async job story.
 
+## 7.5 Debt status update (post audit — commit: dedupe-RRF)
+
+- ✅ Removed duplicate `_rrf_fuse` in `core/workspace.py`; facade now uses canonical `rrf_fuse` from `retrieval/fusion`.
+- ✅ Removed duplicate `_hit_sensor`; facade and `SearchService` share `hit_sensor()` + new `apply_hit_filters()` (spatial → temporal → sensor).
+- ⏳ Remaining: route facade retrieval through `SearchService` with sparse/dense backend adapters (roadmap v0.1 item 1).
+
 ## 7. Recommended milestones (summary — details in roadmap)
 
 - **v0.1**: consolidate (kill duplication, CI, close test gaps, docx decision)

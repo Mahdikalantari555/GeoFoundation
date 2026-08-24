@@ -16,8 +16,9 @@ Audit of `main` @ `364b897`. Findings verified against source; severity is pragm
 
 | Duplication | Locations | Risk |
 |---|---|---|
-| **Two RRF implementations** | `retrieval/fusion.py:rrf_fuse()` vs private `_rrf_fuse()` in `core/workspace.py:1113` | Divergent fusion behavior between facade path and service path — highest-priority cleanup |
-| Two search orchestrations | `Workspace.search/_fts_search/_dense_search/_numpy_dense_search` vs `retrieval/search_service.SearchService` (+ `_WorkspaceSearchAdapter` bridging) | Logic drift; hard to evolve filters once |
+| ~~**Two RRF implementations**~~ | ~~`retrieval/fusion.py:rrf_fuse()` vs private `_rrf_fuse()` in `core/workspace.py`~~ | **RESOLVED** — `_rrf_fuse` removed; `Workspace.search` now imports canonical `rrf_fuse` from `retrieval/fusion` (commit: dedupe-RRF) |
+| ~~Two sensor filters / orchestrations~~ | ~~`_hit_sensor` in `core/workspace.py` + inline sensor chain vs `retrieval/search_service`~~ | **RESOLVED** — single `hit_sensor()` + `apply_hit_filters()` in `retrieval/search_service`; `Workspace.search` delegates to it. Facade and service now share the exact post-fusion filter chain (spatial → temporal → sensor) |
+| Two search orchestrations | `Workspace.search/_fts_search/_dense_search/_numpy_dense_search` vs `retrieval/search_service.SearchService` (+ `_WorkspaceSearchAdapter` bridging) | Logic drift risk remains: facade still runs its own FTS/dense retrieval; full convergence behind `SearchService` is deferred (roadmap v0.1 item 2) |
 | Thin double wrappers | `services/search_service.py`, `services/chat_service.py` re-wrap retrieval/qa services that facade already delegates to | Extra indirection with no added behavior |
 | Two UIs | `apps/app.py` vs `apps/dashboard/` | Confusion about canonical entry |
 
@@ -69,7 +70,7 @@ Also: no property-based tests anywhere; no benchmark regression gate in CI (no C
 
 ## Recommended cleanup order
 
-1. Kill duplicate RRF + unify search orchestration behind `SearchService`.
+1. ~~Kill duplicate RRF + unify search orchestration behind `SearchService`.~~ **PARTIAL**: RRF + sensor-filter duplication removed; both paths share `rrf_fuse` / `apply_hit_filters` / `hit_sensor`. Remaining: converge `Workspace.search` FTS/dense retrieval into `RetrievalBackend` adapters so the facade uses `SearchService` directly (roadmap v0.1 item 1).
 2. Add CI running ruff+mypy+pytest+coverage.
 3. Delete legacy app + spike; decide EventBus fate.
 4. Unit tests for query_parser, deduplicator, job_queue, prompts.

@@ -46,9 +46,22 @@ rs = [
     "geopandas>=0.14",
     "Pillow>=10.0",
 ]
-# Vision (image embeddings)
+# Sentence-transformers dense text embeddings
+st = [
+    "sentence-transformers>=3.0",
+]
+# Qdrant server-mode vector backend
+vector = [
+    "qdrant-client>=1.10",
+]
+# Vision (image embeddings via OLMoEarth Nano torch weights)
 vision = [
+    "torch>=2.0",
     "Pillow>=10.0",
+]
+# OpenDataLoader PDF parsing (optional high-quality PDF backend)
+opendataloader = [
+    "opendataloader-pdf>=2.5,<3",
 ]
 # Streamlit reference UI
 ui = [

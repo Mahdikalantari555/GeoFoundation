@@ -20,7 +20,8 @@ Verified from code (this session):
 **Goals:**
 - ST + Qdrant as pure additions behind existing protocols; zero behavior change when unset.
 - One selection seam in config consumed by IndexService.
-- e5 prefix handling invisible to callers.
+- Model-family prefix handling invisible to callers.
+- Embedding model identity recorded and verified (manifest metadata, mismatch warning, reindex-on-change).
 - Compose stack reproducible on a clean machine.
 
 **Non-Goals:**
@@ -33,13 +34,16 @@ Verified from code (this session):
 ## Decisions
 
 ### D1 — Embedder selection via settings field
-Add `embedding_backend: Literal["hashing", "llama-cpp", "sentence-transformers"] = "hashing"` and `st_model_name: str = "intfloat/multilingual-e5-small"` to `WorkspaceSettings`. `_embedder()` becomes a three-way dispatch. Alternative considered: auto-detect installed extras — rejected (surprising, untestable ordering).
+Add `embedding_backend: Literal["hashing", "llama-cpp", "sentence-transformers"] = "hashing"` and `st_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"` to `WorkspaceSettings`. `_embedder()` becomes a three-way dispatch. Rationale for the MiniLM default: ~90MB download, 384-dim, low memory, CPU-friendly — matches the "lightweight default, higher-quality multilingual opt-in" policy; `intfloat/multilingual-e5-base` / `BAAI/bge-m3` are the documented multilingual alternatives. `embedding_backend` default stays `hashing` so a bare core install (no torch) keeps working; selecting ST without the extra raises the actionable ImportError. Alternative considered: auto-detect installed extras — rejected (surprising, untestable ordering).
 
 ### D2 — space_id derivation
 `sentence-transformers` embedders report `space_id = f"text.st.{model_name}.v1"` (slashes → `-`). Guarantees per-model space isolation and stable rebuild detection. Hashing keeps `text.hash.v1`.
 
-### D3 — e5 prefixes inside the embedder
-`SentenceTransformerEmbedder.embed()` prefixes every input with `"passage: "`; a dedicated `embed_query(texts)` method uses `"query: "`. Search path calls `embed_query`; ingest path calls `embed`. Rationale: e5 models degrade silently without prefixes; callers must not know. Non-e5 models get empty-prefix passthrough (prefix map keyed by model family).
+### D3 — Model-family prefixes inside the embedder
+`SentenceTransformerEmbedder` keys prefix behavior by model family: e5 models get `"passage: "` on `embed()` and `"query: "` on the query path; all other families (incl. MiniLM, bge) get empty-prefix passthrough. Search path calls `embed_query`; ingest path calls `embed`. Rationale: e5 degrades silently without prefixes; callers must not know.
+
+### D8 — Embedding model metadata + mismatch warning
+Build manifests (existing `index/manifests` module) gain embedder metadata: `model_id`, `dim`, `space_id`, `built_at`. Written for both local VectorBackend and QdrantBackend builds. At search time, `RetrievalSearchService` compares the active embedder's space/model against each backend's manifest; mismatch ⇒ emit a warning naming both models before results return (warn-only — search still executes; vectors are never mixed because spaces are isolated). Changing models requires explicit `rebuild` per space. Single-model-per-project default; no multi-index routing yet.
 
 ### D4 — QdrantBackend maps contract to collections
 Collection name = `space_id`; vector params created on first upsert with dimension from first vector and cosine distance. Point id = deterministic UUID-5 of record id (Qdrant rejects arbitrary string ids). Payload stores `text`, `metadata`, original record id. `save()/load()/exists()` become compatibility no-ops/flags so `IndexService` can treat backends uniformly; real persistence is server-side. Alternative: qdrant local mode — rejected (defeats the point of a server-grade store; compose runs the server).

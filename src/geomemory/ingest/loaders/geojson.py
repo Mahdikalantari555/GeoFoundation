@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from geomemory.core.models import ParsedObject, SourceRef
 from geomemory.rs.vector.reader import VectorReader, describe_layer

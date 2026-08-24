@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import shutil
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Protocol
+from typing import Protocol
 
 from geomemory.core.models import ParsedObject, SourceRef
 
@@ -50,3 +52,8 @@ def mime_for_path(path: str) -> str:
         ".gpkg": "application/geo+json",
     }
     return table.get(suffix, "application/octet-stream")
+
+
+def java_available() -> bool:
+    """Return True when a `java` executable is on PATH (required by OpenDataLoader)."""
+    return shutil.which("java") is not None

@@ -145,6 +145,16 @@ class TestAsk:
 class TestAskWithBackend:
     """Grounded QA with a configured (fake) LLM backend."""
 
+    def _patch_factory(self, monkeypatch, fake_backend):
+        from geomemory.qa.backend_factory import build_llm_backend
+
+        def _fake_factory(settings):
+            return fake_backend, 2000
+
+        monkeypatch.setattr(
+            "geomemory.qa.backend_factory.build_llm_backend", _fake_factory
+        )
+
     def test_ask_generates_answer_with_citations(
         self, temp_workspace, sample_markdown, monkeypatch
     ):
@@ -153,9 +163,6 @@ class TestAskWithBackend:
         class _FakeBackend:
             model_id = "fake"
 
-            def __init__(self, model_path: str) -> None:
-                self.model_path = model_path
-
             def generate(self, request: GenerationRequest) -> GenerationResult:
                 text = request.context[0].text + " [1]" if request.context else ""
                 return GenerationResult(text=text, prompt_hash="h", model_id=self.model_id)
@@ -163,11 +170,8 @@ class TestAskWithBackend:
             def count_tokens(self, text: str) -> int:
                 return max(1, len(text) // 4)
 
-        monkeypatch.setattr(
-            "geomemory.qa.llama_cpp_backend.LlamaCppBackend", _FakeBackend
-        )
+        self._patch_factory(monkeypatch, _FakeBackend())
         ws = temp_workspace
-        ws.settings.model_path = "/fake/model.gguf"
         col = ws.create_collection("docs")
         ws.ingest(sample_markdown, collection_id=col.id)
 
@@ -184,9 +188,6 @@ class TestAskWithBackend:
         class _FakeBackend:
             model_id = "fake"
 
-            def __init__(self, model_path: str) -> None:
-                self.model_path = model_path
-
             def generate(self, request: GenerationRequest) -> GenerationResult:
                 text = request.context[0].text + " [1]" if request.context else ""
                 return GenerationResult(text=text, prompt_hash="h", model_id=self.model_id)
@@ -194,11 +195,8 @@ class TestAskWithBackend:
             def count_tokens(self, text: str) -> int:
                 return max(1, len(text) // 4)
 
-        monkeypatch.setattr(
-            "geomemory.qa.llama_cpp_backend.LlamaCppBackend", _FakeBackend
-        )
+        self._patch_factory(monkeypatch, _FakeBackend())
         ws = temp_workspace
-        ws.settings.model_path = "/fake/model.gguf"
         col = ws.create_collection("docs")
         ws.ingest(sample_markdown, collection_id=col.id)
 
@@ -221,6 +219,52 @@ class TestAskWithBackend:
         citations = ws.conn.execute("SELECT * FROM citation").fetchall()
         assert len(citations) == 1
         assert citations[0]["segment_id"] == answer.citations[0].segment_id
+
+    def test_ask_api_provider_without_key_abstains(self, temp_workspace, sample_markdown, monkeypatch):
+        monkeypatch.delenv("GEOMEMORY_LLM_API_KEY", raising=False)
+        ws = temp_workspace
+        col = ws.create_collection("docs")
+        ws.ingest(sample_markdown, collection_id=col.id)
+        ws.settings.llm_provider = "api"
+        ws.settings.offline = False
+        answer = ws.ask("What is NDVI?")
+        assert answer.abstained is True
+        assert "API key" in answer.abstention_reason
+
+    def test_ask_token_budget_passed_to_service(self, temp_workspace, sample_markdown, monkeypatch):
+        from geomemory.core.models import GenerationRequest, GenerationResult, QAResult
+        from geomemory.qa.chat_service import ChatService
+
+        captured = {}
+
+        class _FakeBackend:
+            model_id = "fake"
+
+            def generate(self, request: GenerationRequest) -> GenerationResult:
+                return GenerationResult(text="ok [1]", prompt_hash="h", model_id=self.model_id)
+
+            def count_tokens(self, text: str) -> int:
+                return max(1, len(text) // 4)
+
+        class _FakeChatService(ChatService):
+            def __init__(self, search_service, llm_backend, *, token_budget=2000, **kw):
+                captured["token_budget"] = token_budget
+                super().__init__(search_service, llm_backend, token_budget=token_budget, **kw)
+
+            def ask(self, question, **kw):
+                return QAResult(text="ok", abstained=False, model=self.llm_backend.model_id)
+
+        monkeypatch.setattr(
+            "geomemory.qa.backend_factory.build_llm_backend",
+            lambda settings: (_FakeBackend(), 2000),
+        )
+        monkeypatch.setattr("geomemory.qa.chat_service.ChatService", _FakeChatService)
+        ws = temp_workspace
+        col = ws.create_collection("docs")
+        ws.ingest(sample_markdown, collection_id=col.id)
+
+        ws.ask("What is NDVI?")
+        assert captured["token_budget"] == 2000
 
 
 class TestInspect:

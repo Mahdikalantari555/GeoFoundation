@@ -11,11 +11,13 @@ from geomemory.index.manifest import (
     write_manifest,
 )
 from geomemory.index.numpy_backend import NumpyBackend
+from geomemory.index.qdrant_backend import QdrantBackend
 from geomemory.index.txtai_backend import TxtaiBackend
 
 __all__ = [
     "ImageIndex",
     "NumpyBackend",
+    "QdrantBackend",
     "RetrievalBackend",
     "TxtaiBackend",
     "create_manifest",

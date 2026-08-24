@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from geomemory.core.exceptions import AbstentionError
 from geomemory.core.models import (
     GenerationRequest,
     QAResult,
@@ -94,7 +95,18 @@ class ChatService:
             temperature=self.temperature,
             stop_sequences=["\n\n"],
         )
-        gen = self.llm_backend.generate(gen_request)
+        try:
+            gen = self.llm_backend.generate(gen_request)
+        except AbstentionError as exc:
+            return QAResult(
+                text="",
+                abstained=True,
+                abstention_reason=str(exc),
+                sources=context,
+                retrieval_run_id=result.retrieval_run_id,
+                latency_ms=result.latency_ms,
+                model=getattr(self.llm_backend, "model_id", "unknown"),
+            )
 
         # Map citations and detect abstention.
         citations = map_citations("", gen.text, context)

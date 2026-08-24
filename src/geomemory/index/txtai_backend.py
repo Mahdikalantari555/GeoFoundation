@@ -25,7 +25,7 @@ class TxtaiBackend:
 
     def __init__(self, index_dir: str, space_id: str = "text.nomic.v1") -> None:
         try:
-            from txtai.embeddings import Embeddings  # type: ignore[import-not-found]
+            from txtai.embeddings import Embeddings  # type: ignore[import-untyped]
         except ImportError as exc:  # pragma: no cover - depends on optional dep
             raise ImportError(
                 "TxtaiBackend requires txtai. Install with `pip install geomemory[ai]`."
@@ -39,7 +39,11 @@ class TxtaiBackend:
     def db(self) -> Any:
         """Lazily build and return the txtai database."""
         if self._db is None:
-            self._db = self._Embeddings(path=self.index_dir, content=True, hybrid=True, sparse=True)
+            # NOTE: Do NOT pass path=self.index_dir to the constructor — txtai
+            # interprets path= as a model identifier and tries to download/load
+            # it from HuggingFace. We use precomputed embeddings supplied via
+            # upsert(); the database is persisted via save() after indexing.
+            self._db = self._Embeddings(content=True, hybrid=True, sparse=True)
         return self._db
 
     # ── Protocol implementation ──────────────────────────────────────────────
@@ -65,7 +69,12 @@ class TxtaiBackend:
 
     def count(self) -> int:
         """Return the number of indexed records."""
-        return len(self.db) if self._db is not None else 0
+        if self._db is None:
+            return 0
+        try:
+            return int(self.db.count())
+        except Exception:
+            return 0
 
     def rebuild(self, manifest: IndexManifest) -> None:
         """Rebuild the index from a manifest.
@@ -73,21 +82,20 @@ class TxtaiBackend:
         A fresh database is created at the index directory; callers should
         re-embed and re-upsert after calling this.
         """
-        self._db = self._Embeddings(manifest=manifest.to_json(), content=True, hybrid=True, sparse=True)
+        self._db = self._Embeddings(
+            manifest=manifest.to_json(), content=True, hybrid=True, sparse=True
+        )
 
     def search(self, request: SearchRequest) -> list[SearchHit]:
         """Execute a hybrid search through txtai."""
-        if request.mode == "sparse":
-            results = self.db.search(request.query, limit=request.top_k)
-        elif request.mode == "dense":
-            results = self.db.search(request.query, limit=request.top_k)
-        else:
-            results = self.db.search(request.query, limit=request.top_k)
+        results = self.db.search(request.query, limit=request.top_k)
         hits: list[SearchHit] = []
         for item in results:
             text = str(item.get("text", ""))
             score = float(item.get("score", 0.0))
-            metadata: dict[str, Any] = {k: v for k, v in item.items() if k not in ("id", "text", "score")}
+            metadata: dict[str, Any] = {
+                k: v for k, v in item.items() if k not in ("id", "text", "score")
+            }
             hits.append(
                 SearchHit(
                     id=str(item.get("id", "")),

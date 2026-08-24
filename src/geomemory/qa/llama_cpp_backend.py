@@ -15,9 +15,16 @@ class LlamaCppBackend:
     (temperature, max_tokens, stop sequences) are configurable per request.
     """
 
-    def __init__(self, model_path: str, *, model_id: str = "minicpm") -> None:
+    def __init__(
+        self,
+        model_path: str,
+        *,
+        model_id: str = "minicpm",
+        n_ctx: int = 32768,
+    ) -> None:
         self.model_path = model_path
         self._model_id = model_id
+        self.n_ctx = n_ctx
         self._llm = None
 
     @property
@@ -35,7 +42,7 @@ class LlamaCppBackend:
                 ) from exc
             self._llm = Llama(
                 model_path=self.model_path,
-                n_ctx=4096,
+                n_ctx=self.n_ctx,
                 verbose=False,
             )
 

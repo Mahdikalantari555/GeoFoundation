@@ -5,8 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from geomemory.core.models import IndexRecord, SearchRequest
+from geomemory.core.models import IndexRecord, SearchRequest, WorkspaceSettings
 from geomemory.embeddings.hashing_text import HashingTextEmbedder
+from geomemory.embeddings.llama_cpp_text import LlamaCppTextEmbedder
 from geomemory.index.manifest import load_manifest, manifest_exists
 from geomemory.index.vector_backend import VectorBackend
 from geomemory.services.index_service import IndexService
@@ -178,6 +179,78 @@ class TestIndexService:
     def test_search_without_index_returns_empty(self, temp_workspace):
         service = IndexService(temp_workspace.conn, temp_workspace.index_dir)
         assert service.search("anything", space_id="text.hash.v1") == []
+
+
+class TestManifestMetadataAndMismatch:
+    def test_manifest_records_model_dim_space(self, temp_workspace, sample_markdown):
+        ws = temp_workspace
+        col = ws.create_collection("docs")
+        ws.ingest(sample_markdown, collection_id=col.id)
+        service = IndexService(ws.conn, ws.index_dir, settings=ws.settings)
+        service.build("text.hash.v1")
+        backend_dir = ws.index_dir / "text.hash.v1"
+        manifest = load_manifest(backend_dir)
+        assert manifest.model_id == "hashing-ngram-v1"
+        assert manifest.dimension == 256
+        assert manifest.space_id == "text.hash.v1"
+        assert manifest.doc_count > 0
+
+    def test_mismatch_warns(self, temp_workspace, sample_markdown):
+        ws = temp_workspace
+        col = ws.create_collection("docs")
+        ws.ingest(sample_markdown, collection_id=col.id)
+        # Build with hashing backend.
+        settings_hash = WorkspaceSettings(name="ws", embedding_backend="hashing")
+        service = IndexService(ws.conn, ws.index_dir, settings=settings_hash)
+        service.build("text.hash.v1")
+        # Query with a different embedder model_id -> warning.
+        service2 = IndexService(ws.conn, ws.index_dir)
+
+        class _OtherEmbedder:
+            model_id = "other-model"
+
+            def embed(self, texts):
+                return HashingTextEmbedder().embed(texts)
+
+        service2._embedder = lambda model_path: _OtherEmbedder()
+        with pytest.warns(UserWarning, match="embedding model mismatch"):
+            service2.search("NDVI", space_id="text.hash.v1")
+
+    def test_no_warning_when_matching(self, temp_workspace, sample_markdown):
+        ws = temp_workspace
+        col = ws.create_collection("docs")
+        ws.ingest(sample_markdown, collection_id=col.id)
+        service = IndexService(ws.conn, ws.index_dir, settings=ws.settings)
+        service.build("text.hash.v1")
+        import warnings
+        # Query with the same backend -> no warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            service.search("NDVI", space_id="text.hash.v1")
+
+
+class TestEmbedderDispatch:
+    def _service(self, settings=None):
+        import tempfile
+
+        tmp = tempfile.mkdtemp()
+        conn = __import__("sqlite3").connect(":memory:")
+        return IndexService(conn, tmp, settings=settings)
+
+    def test_hashing_default(self):
+        s = self._service()
+        assert isinstance(s._embedder(None), HashingTextEmbedder)
+
+    def test_settings_hashing(self):
+        settings = WorkspaceSettings(name="ws", embedding_backend="hashing")
+        s = self._service(settings)
+        assert isinstance(s._embedder(None), HashingTextEmbedder)
+
+    def test_settings_llama_cpp_uses_path(self):
+        settings = WorkspaceSettings(name="ws", embedding_backend="llama-cpp")
+        s = self._service(settings)
+        backend = s._embedder("/tmp/m.gguf")
+        assert isinstance(backend, LlamaCppTextEmbedder)
 
 
 class TestWorkspaceIndexWiring:

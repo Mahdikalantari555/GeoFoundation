@@ -6,7 +6,7 @@ Built on [gap-analysis.md](gap-analysis.md) and `docs/current-state/`. Versions 
 
 Theme: pay down debt so every later change is cheaper.
 
-1. Unify retrieval path: delete `_rrf_fuse` in workspace.py, route facade through `SearchService` only. *(tech-debt #2)*
+1. ~~Unify retrieval path: delete `_rrf_fuse` in workspace.py, route facade through `SearchService` only.~~ **PARTIAL (done in dedupe-RRF commit)**: duplicate `_rrf_fuse` and `_hit_sensor` removed; facade and `SearchService` share `rrf_fuse`/`apply_hit_filters`/`hit_sensor`. Remaining: wrap facade FTS/dense retrieval as `RetrievalBackend` adapters so `Workspace.search` calls `SearchService` directly. *(tech-debt #2)*
 2. Add CI (GitHub Actions): ruff + mypy --strict + pytest + coverage ≥80 gate. *(debt #2)*
 3. Close direct-test gaps: query_parser, deduplicator, job_queue, prompts, events, plugin_registry. *(missing tests)*
 4. Decide & execute: delete legacy `apps/app.py`; archive spike script; wire-or-remove EventBus subscribers; remove Embedder/Backend registries or use them. *(dead code)*

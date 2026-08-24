@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from geomemory.core.models import SourceRef
+from geomemory.core.models import SourceRef, WorkspaceSettings
 from geomemory.core.plugin_registry import LoaderRegistry
-from geomemory.ingest.loaders.base import Loader, mime_for_path
+from geomemory.ingest.loaders.base import Loader, java_available, mime_for_path
 from geomemory.ingest.loaders.code import CodeLoader, NotebookLoader
 from geomemory.ingest.loaders.geojson import GeoJsonLoader
 from geomemory.ingest.loaders.geotiff import GeoTiffLoader
@@ -17,7 +17,7 @@ def default_registry() -> LoaderRegistry:
     registry = LoaderRegistry()
     for mime in ("text/plain", "text/markdown", "text/html"):
         registry.register(mime, TextLoader())
-    registry.register("application/pdf", PdfLoader())
+    registry.register("application/pdf", _smart_pdf_loader())
     registry.register(
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         DocxLoader(),
@@ -29,6 +29,33 @@ def default_registry() -> LoaderRegistry:
         registry.register(mime, GeoTiffLoader())
     registry.register("application/geo+json", GeoJsonLoader())
     return registry
+
+
+def _smart_pdf_loader() -> Loader:
+    """Prefer OpenDataLoader when Java + extra are present, else PyMuPDF."""
+    if java_available():
+        try:
+            from geomemory.ingest.loaders.opendataloader_pdf import OpenDataLoaderPdf
+            return OpenDataLoaderPdf()
+        except RuntimeError:
+            pass
+    return PdfLoader()
+
+
+def select_pdf_loader(settings: WorkspaceSettings | None = None) -> Loader:
+    """Return the PDF loader honoring the ``pdf_parser`` setting.
+
+    - ``"opendataloader"`` → OpenDataLoaderPdf (raises if Java/extra missing)
+    - ``"pymupdf"`` → PdfLoader
+    - ``"auto"`` (default) → OpenDataLoaderPdf when Java + extra present, else PdfLoader
+    """
+    preference = settings.pdf_parser if settings else "auto"
+    if preference == "pymupdf":
+        return PdfLoader()
+    if preference == "opendataloader":
+        from geomemory.ingest.loaders.opendataloader_pdf import OpenDataLoaderPdf
+        return OpenDataLoaderPdf()
+    return _smart_pdf_loader()
 
 
 def get_loader(source: SourceRef, registry: LoaderRegistry | None = None) -> Loader | None:
@@ -69,9 +96,11 @@ __all__ = [
     "Loader",
     "LoaderRegistry",
     "NotebookLoader",
+    "OpenDataLoaderPdf",
     "PdfLoader",
     "TextLoader",
     "default_registry",
     "get_loader",
+    "java_available",
     "mime_for_path",
 ]

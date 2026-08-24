@@ -23,6 +23,23 @@ def backend(tmp_path):
     return TxtaiBackend(str(tmp_path / "idx"))
 
 
+def _network_available() -> bool:
+    """Check if HuggingFace Hub is reachable for model downloads."""
+    import socket
+
+    try:
+        with socket.create_connection(("huggingface.co", 443), timeout=2):
+            return True
+    except Exception:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _network_available(),
+    reason="txtai integration tests require HuggingFace Hub access (model download)",
+)
+
+
 class TestTxtaiBackend:
     def test_upsert_and_count(self, backend):
         backend.upsert([IndexRecord(id="s1", text="NDVI vegetation health")])
