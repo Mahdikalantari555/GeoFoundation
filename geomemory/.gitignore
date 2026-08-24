@@ -1,0 +1,115 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.venv/
+venv/
+env/
+.Python
+pip-wheel-metadata/
+
+# Packaging / build
+*.so
+*.dylib
+*.dll
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Testing
+.pytest_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage.xml
+junit.xml
+test-results/
+
+# GeoMemory workspaces / data
+workspaces/
+workspace/
+workspace2/
+*.geomemory/
+*.db
+*.db-wal
+*.db-shm
+
+# Models (GGUF files are large, user-managed)
+*.gguf
+models/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.yaml
+secrets.yml
+
+# Tooling / cloud
+.terraform/
+.kubernetes/
+.kube/
+
+# AI tooling / agents (local-only context, not for publish)
+.claude/
+.aider*
+.cursor/
+.codeium/
+.memory/
+.ai/
+*.ai.json
+.agent/
+.agents/
+.kilocode/
+.opencode/
+CLAUDE.md
+.hermes/
+
+# Codebase memory
+.codebase-memory/
+*.codebase-memory/
+graphify-out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.fuse_hidden*
+
+# Editors / temp
+*~
+*.bak
+*.tmp
+*.temp
+*.orig
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.github/workflows/ci.yml
+tests/data/

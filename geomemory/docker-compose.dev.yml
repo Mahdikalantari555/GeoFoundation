@@ -1,0 +1,29 @@
+version: "3.9"
+
+# Development stack — bind-mount src/ for instant code reload.
+#
+# Usage:
+#   docker compose --file docker-compose.dev.yml up
+#   docker compose --file docker-compose.dev.yml run --rm geomemory-dev bash
+#
+# Source changes on host appear immediately inside the container.
+# No image rebuild needed for src/ edits.
+
+services:
+  geomemory-dev:
+    build:
+      context: .
+      target: core
+    volumes:
+      - ./src:/app/src
+      - workspace_data:/workspace
+      - uv_cache:/root/.cache/uv
+    environment:
+      GEOMEMORY_WORKSPACE: /workspace
+    ports:
+      - "8501:8501"
+    entrypoint: ["geomemory"]
+
+volumes:
+  workspace_data:
+  uv_cache:
