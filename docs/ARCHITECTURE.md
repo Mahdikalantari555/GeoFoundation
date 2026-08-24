@@ -46,6 +46,21 @@ readers). The gateway holds one active workspace and serializes writes
 behind an asyncio lock. This is a platform invariant, not an
 implementation detail.
 
+### LLM compute (hybrid, API-default)
+
+Selection follows geomemory's `backend_factory`:
+
+- `llm_provider: "api"` (**default**) — any OpenAI-compatible endpoint;
+  `llm_api_base_url` (Kilo gateway default), `llm_model_id`,
+  `llm_context_window`. API key read from **server env**
+  (`GEOMEMORY_LLM_API_KEY` by default; env var name configurable via
+  `llm_api_key_env`) — never persisted in the workspace DB, never sent to
+  the web client (UI shows only configured/missing status).
+- `llm_provider: "llamacpp"` — local GGUF via `model_path`; also the only
+  option when `offline: true` (offline mode blocks the API backend).
+- No backend constructible → `LLMBackendUnavailableError` → abstention
+  response with reason, surfaced as first-class UI state (not an error).
+
 ## Inherited invariants (from geomemory — do not break)
 
 1. Embedding spaces isolated per modality (text.* vs vision ids).

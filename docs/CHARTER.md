@@ -5,9 +5,11 @@
 
 ## Vision
 
-A **local-first, offline-by-default AI platform for remote sensing research**:
-one machine, no cloud dependency, citation-grounded answers over your own
-documents, rasters, and models — with a feedback loop that turns researcher
+A **data-sovereign AI platform for remote sensing research**: your knowledge
+— documents, rasters, feedback — stays on your machine, while compute is
+pluggable: a remote OpenAI-compatible LLM API **by default** (e.g. Kilo
+gateway), local GGUF models when you need full offline. Citation-grounded
+answers over your own data, with a feedback loop that turns researcher
 judgment into training data.
 
 GeoFoundation is the umbrella: the memory engine, the agent SDK, the algorithm
@@ -49,9 +51,11 @@ Apps never import libs directly; libs never import upward.
 
 ## Core values
 
-1. **Local-first** — everything runs on the user's machine; offline is the
-   default, remote APIs are opt-in backends.
-2. **Frugal AI** — CPU-friendly small models (GGUF), no GPU required.
+1. **Local data, hybrid compute** — workspaces and knowledge never leave the
+   user's machine; the LLM is pluggable, remote API by default, local GGUF as
+   offline fallback. `offline: true` flips fully local (blocks API backend).
+2. **Frugal by design** — local embedders stay CPU-friendly (no GPU needed);
+   compute can scale up to hosted APIs without moving the data.
 3. **Citations or abstention** — answers cite segments with locators, or
    say nothing. No silent hallucination. Provenance chain:
    `answer → citation → segment → asset_revision → objects/<sha256>`.

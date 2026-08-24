@@ -13,8 +13,10 @@ Recharts · lucide-react · openapi-typescript + openapi-fetch generated client.
 ## App shell
 
 Sidebar (grouped nav) · header with workspace switcher + language toggle +
-connection pill (gateway up? workspace open?). All pages: loading/empty/error
-states; bilingual smoke-check (en + fa/RTL).
+connection pill (gateway up? workspace open? LLM backend configured?). All
+pages: loading/empty/error states; bilingual smoke-check (en + fa/RTL);
+LLM-unavailable (no key / API down / offline) renders as abstention state
+with reason, never as a crash.
 
 ## Pages (16)
 
@@ -22,10 +24,14 @@ states; bilingual smoke-check (en + fa/RTL).
 1. **Overview** — stat cards (collections, assets, segments, storage bytes,
    feedback counts), index manifest status, live recent events (SSE), open/
    create workspace dialog.
-2. **Settings** — workspace config form (name, language, offline, model/
-   embedding/vision paths, batch_size) → `PUT /settings`.
+2. **Settings** — workspace config form: general (name, language, offline,
+   batch_size), model paths (model/embedding/vision), **LLM compute**
+   (provider: api default | llamacpp, base URL, model id, context window,
+   key env var name; key status rendered as configured/missing — the key
+   itself is server-side only) → `PUT /settings`.
 3. **Doctor** — environment table (core/optional deps with badges), workspace
-   structural check, round-trip smoke test.
+   structural check, round-trip smoke test, LLM backend probe (API reachable,
+   key configured, model responds).
 
 ### Knowledge group (geomemory)
 4. **Collections** — card grid, create dialog, archive (confirm), drill into

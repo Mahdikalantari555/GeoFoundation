@@ -20,7 +20,7 @@
 
 | Method | Route | Notes |
 |---|---|---|
-| GET | `/health` | `{status, workspace: closed|open, path?}` |
+| GET | `/health` | `{status, workspace: closed|open, path?, llm: {provider, configured, reachable?}}` |
 | GET | `/api/v1/events` | SSE: `asset_created`, `collection_created`, `job_progress` |
 
 ## Workspace
@@ -34,7 +34,12 @@
 | PUT | `/workspace/settings` | partial config → `ws.update_settings` |
 | GET | `/workspace/stats` | `ws.stats()` |
 
-Config fields: `name, language(en|fa), offline, model_path, embedding_path, vision_path, batch_size`.
+Config fields: `name, language(en|fa), offline, batch_size, model_path,
+embedding_path, vision_path` + LLM compute: `llm_provider (api|llamacpp,
+api = default), llm_api_base_url, llm_model_id, llm_context_window,
+llm_api_key_env`. The API key itself is **server-env-only** (read at call
+time from the named env var, e.g. `GEOMEMORY_LLM_API_KEY`); it is never
+accepted from clients, never persisted, never returned by any endpoint.
 
 ## Collections
 
@@ -101,6 +106,7 @@ Spaces: `text.nomic.v1` (default), `text.hash.v1` (offline).
 | GET | `/doctor/environment` | `doctor_environment()` |
 | GET | `/doctor/workspace?path=` | `doctor_workspace(path)` |
 | GET | `/doctor/roundtrip?path=` | `doctor_workspace_open(path)` |
+| GET | `/doctor/llm` | LLM backend probe: provider, key configured, base URL reachability, model ping |
 
 ## Agent (geoagent)
 
