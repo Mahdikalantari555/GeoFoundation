@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+    "unit: unit tests",
+    "integration: integration tests",
+    "golden: golden tests with fixed fixtures",
+    "dirty: dirty-data and edge-case tests",
+    "rs: remote sensing domain tests",
+]

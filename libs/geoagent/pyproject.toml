@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geoagent"
+version = "0.1.0"
+description = "Lightweight agent framework over the GeoMemory public API"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+  "pydantic>=2.0",
+  "click>=8.1",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+memory = ["geomemory"]
+dev = ["pytest>=7.0", "ruff"]
+
+[project.scripts]
+geoagent = "geoagent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

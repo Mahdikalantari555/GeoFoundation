@@ -1,0 +1,4 @@
+Land cover classification report using Sentinel-2 imagery.
+
+The classifier achieved 92% overall accuracy.
+Major land cover classes: water, forest, agriculture, urban.

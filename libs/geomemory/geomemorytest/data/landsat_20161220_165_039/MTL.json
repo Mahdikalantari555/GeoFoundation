@@ -1,0 +1,127 @@
+{
+  "item_id": "LC08_L2SP_165039_20161220_02_T2",
+  "datetime": "2016-12-20",
+  "cloud_cover": 37.82,
+  "path": "165",
+  "row": "039",
+  "sun_elevation": 32.45075306,
+  "sun_azimuth": 156.56036682,
+  "platform": "landsat-8",
+  "instruments": [
+    "oli",
+    "tirs"
+  ],
+  "landsat:correction": "L2SP",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          48.2037519,
+          31.3502198
+        ],
+        [
+          50.1055085,
+          30.9778017
+        ],
+        [
+          49.6374629,
+          29.2515495
+        ],
+        [
+          47.7680756,
+          29.6241462
+        ],
+        [
+          48.2037519,
+          31.3502198
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    47.69018574,
+    29.21168475,
+    50.15213764,
+    31.38427525
+  ],
+  "collection": "landsat-c2-l2",
+  "properties": {
+    "gsd": 30,
+    "created": "2022-05-06T17:13:58.029641Z",
+    "sci:doi": "10.5066/P9OGBGM6",
+    "datetime": "2016-12-20T07:16:07.038463Z",
+    "platform": "landsat-8",
+    "proj:shape": [
+      7891,
+      7751
+    ],
+    "description": "Landsat Collection 2 Level-2",
+    "instruments": [
+      "oli",
+      "tirs"
+    ],
+    "eo:cloud_cover": 37.82,
+    "proj:transform": [
+      30.0,
+      0.0,
+      185085.0,
+      0.0,
+      -30.0,
+      3472515.0
+    ],
+    "view:off_nadir": 0,
+    "landsat:wrs_row": "039",
+    "landsat:scene_id": "LC81650392016355LGN02",
+    "landsat:wrs_path": "165",
+    "landsat:wrs_type": "2",
+    "view:sun_azimuth": 156.56036682,
+    "landsat:correction": "L2SP",
+    "view:sun_elevation": 32.45075306,
+    "landsat:cloud_cover_land": 49.32,
+    "landsat:collection_number": "02",
+    "landsat:collection_category": "T2",
+    "proj:code": "EPSG:32639"
+  },
+  "assets": [
+    "qa",
+    "ang",
+    "red",
+    "blue",
+    "drad",
+    "emis",
+    "emsd",
+    "trad",
+    "urad",
+    "atran",
+    "cdist",
+    "green",
+    "nir08",
+    "lwir11",
+    "swir16",
+    "swir22",
+    "coastal",
+    "mtl.txt",
+    "mtl.xml",
+    "mtl.json",
+    "qa_pixel",
+    "qa_radsat",
+    "qa_aerosol",
+    "tilejson",
+    "rendered_preview"
+  ],
+  "METADATA": {
+    "PRODUCT_METADATA": {
+      "LANDSAT_PRODUCT_ID": "LC08_L2SP_165039_20161220_02_T2",
+      "ACQUISITION_DATE": "2016-12-20",
+      "WRS Path": "165",
+      "WRS Row": "039",
+      "CLOUD_COVER": 37.82,
+      "PLATFORM": "landsat-8"
+    },
+    "SUN_PARAMETERS": {
+      "SUN_ELEVATION": 32.45075306,
+      "SUN_AZIMUTH": 156.56036682
+    }
+  }
+}
