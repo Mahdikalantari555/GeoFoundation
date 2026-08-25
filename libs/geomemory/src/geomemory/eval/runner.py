@@ -8,14 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from geomemory.core.models import BenchmarkConfig, BenchmarkResult
-from geomemory.eval.benchmark import Benchmark, BenchmarkItem, load_benchmark
+from geomemory.eval.benchmark import BenchmarkItem, load_benchmark
 from geomemory.eval.qa_metrics import (
     abstention_accuracy,
     citation_correctness,
     faithfulness_proxy,
 )
+from geomemory.eval.reporter import markdown_report
 from geomemory.eval.retrieval_metrics import mrr_at_k, ndcg_at_k, precision_at_k, recall_at_k
-from geomemory.eval.reporter import json_report, markdown_report
 
 
 class BenchmarkRunner:

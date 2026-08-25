@@ -22,7 +22,9 @@ from geomemory.feedback.exporters import (
     supported_task_types,
 )
 from geomemory.feedback.review_queue import ReviewQueue
-from geomemory.storage.repositories.feedback_repo import DatasetExampleRepository, FeedbackRepository
+from geomemory.storage.repositories.feedback_repo import (
+    DatasetExampleRepository,
+)
 
 
 class TestEvents:

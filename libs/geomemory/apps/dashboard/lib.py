@@ -5,8 +5,9 @@ never touches SQLite, txtai, or repositories directly.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import streamlit as st
 

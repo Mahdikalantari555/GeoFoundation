@@ -1,9 +1,6 @@
 """Assets page — list, inspect, and manage ingested assets per collection."""
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import streamlit as st
 
 from geomemory import GeoMemory

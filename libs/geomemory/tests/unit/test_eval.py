@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from geomemory.core.models import BenchmarkConfig, BenchmarkResult, Citation, SearchHit
+from geomemory.core.models import BenchmarkResult, Citation, SearchHit
 from geomemory.eval.benchmark import BenchmarkItem, load_benchmark, to_jsonl
 from geomemory.eval.qa_metrics import (
     abstention_accuracy,

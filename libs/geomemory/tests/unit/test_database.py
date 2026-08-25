@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import sqlite3
 
-import pytest
-
-from geomemory.core.exceptions import DatabaseError
 from geomemory.storage.database import connect, initialize, integrity_check, is_healthy, schema_sql
 from geomemory.storage.migrations import applied_versions, current_version, migrate
 

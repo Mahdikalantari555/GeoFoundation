@@ -35,6 +35,19 @@ class HealthResponse(BaseModel):
     llm: HealthLLM
 
 
+class CreateCollectionRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+
+
+class IngestBytesRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    data_base64: str = Field(min_length=1)
+    collection_id: str
+    index_after: bool = True
+    parser: str | None = None
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Workspace
 

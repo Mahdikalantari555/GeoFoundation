@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from geomemory.core.models import GenerationRequest, GenerationResult, SearchFilters, SearchHit
+from geomemory.core.models import GenerationRequest, GenerationResult, SearchHit
 from geomemory.qa.backend import NullBackend
 from geomemory.qa.chat_service import ChatService
-from geomemory.retrieval.search_service import SearchService
 
 
 class _StaticBackend:

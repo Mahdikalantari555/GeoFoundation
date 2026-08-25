@@ -1,9 +1,6 @@
 """Settings page — model config, index management, collections, and workspace doctor."""
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 import streamlit as st
 
 from geomemory import GeoMemory

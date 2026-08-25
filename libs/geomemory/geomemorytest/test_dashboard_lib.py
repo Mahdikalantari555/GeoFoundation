@@ -10,8 +10,6 @@ import sys
 import types
 from pathlib import Path
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Install the streamlit stub BEFORE any dashboard module is imported.
 # ---------------------------------------------------------------------------
@@ -80,8 +78,8 @@ from apps.dashboard.lib import (  # noqa: E402
     set_workspace,
     workspace_exists,
 )
-from geomemory import GeoMemory  # noqa: E402
 
+from geomemory import GeoMemory  # noqa: E402
 
 # ===========================================================================
 # Workspace helpers

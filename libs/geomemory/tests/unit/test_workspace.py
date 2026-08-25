@@ -146,7 +146,6 @@ class TestAskWithBackend:
     """Grounded QA with a configured (fake) LLM backend."""
 
     def _patch_factory(self, monkeypatch, fake_backend):
-        from geomemory.qa.backend_factory import build_llm_backend
 
         def _fake_factory(settings):
             return fake_backend, 2000

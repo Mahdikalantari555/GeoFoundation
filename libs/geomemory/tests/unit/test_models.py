@@ -16,7 +16,6 @@ from geomemory.core.models import (
     Job,
     QAResult,
     SearchFilters,
-    SearchHit,
     SearchResult,
     Segment,
     SpatialFilter,

@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from geomemory.core.models import Job
 

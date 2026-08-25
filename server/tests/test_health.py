@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+
 from geofront_api.main import create_app
 from geofront_api.state import reset_state
 

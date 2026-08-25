@@ -1,22 +1,15 @@
 """Tests for ingestion pipeline, chunkers, loaders, and dirty-data robustness."""
 from __future__ import annotations
 
-from pathlib import Path
-
 import json as _json
 
 import numpy as np
-import pytest
 
-from geomemory.core.models import ParsedObject, SearchHit, SourceRef
-from geomemory.embeddings.normalization import l2_normalize
+from geomemory.core.models import ParsedObject, SourceRef
 from geomemory.embeddings.hashing_text import HashingTextEmbedder
+from geomemory.embeddings.normalization import l2_normalize
 from geomemory.ingest.chunkers import FixedSizeChunker, HeaderThenTokenChunker
 from geomemory.ingest.loaders import CodeLoader, NotebookLoader, PdfLoader, TextLoader, get_loader
-from geomemory.services.ingestion_service import IngestionService
-from geomemory.storage.repositories.segment_repo import SegmentRepository
-from geomemory.storage.object_store import ObjectStore
-
 
 # ===========================================================================
 # Chunker dirty inputs

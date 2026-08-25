@@ -112,7 +112,6 @@ class TestRealCheckpoint:
         p = tmp_path / "img.png"
         img.save(p)
 
-        from pathlib import Path as _P
 
         r_path = embedder.embed_images([str(p)])[0]
         r_pil = embedder.embed_images([img])[0]
