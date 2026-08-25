@@ -30,14 +30,14 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 
 ## M2 — Knowledge base
 
-- [ ] Task: jobs registry + collections routes
+- [x] Task: jobs registry + collections routes
   - Acceptance: 202/poll lifecycle unit-tested
   - Files: server/{jobs.py,routers/collections.py}, tests
-- [ ] Task: ingest routes (multipart + bytes, threadpool, dedup result)
+- [x] Task: ingest routes (multipart + bytes, threadpool, dedup result)
   - Files: server/routers/ingest.py, tests
-- [ ] Task: assets routes (list, inspect)
+- [x] Task: assets routes (list, inspect)
   - Files: server/routers/assets.py, tests
-- [ ] Task: Collections + Ingest + Assets pages
+- [x] Task: Collections + Ingest + Assets pages
   - Files: apps/web/src/features/{collections,ingest,assets}/**
 
 ## M3 — Retrieval

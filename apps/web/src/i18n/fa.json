@@ -83,5 +83,45 @@
     "llmKeyEnv": "متغیر محیطی کلید API",
     "llmKeyHint": "خود کلید API فقط از محیط سرور خوانده می‌شود — هرگز در این رابط ذخیره یا ارسال نمی‌شود.",
     "saved": "ذخیره شد"
+  },
+  "collections": {
+    "title": "مجموعه‌ها",
+    "new": "مجموعه جدید",
+    "namePlaceholder": "نام مجموعه",
+    "descriptionPlaceholder": "توضیح (اختیاری)",
+    "empty": "هنوز مجموعه‌ای نیست. یکی بسازید تا ورود داده آغاز شود.",
+    "archive": "بایگانی",
+    "archiveConfirm": "مجموعه «{{name}}» بایگانی شود؟ دارایی‌هایش در فضای کاری می‌مانند.",
+    "viewAssets": "دیدن دارایی‌ها"
+  },
+  "ingest": {
+    "title": "ورود داده",
+    "collection": "مجموعه",
+    "indexAfter": "نمایه‌سازی پس از ورود",
+    "formats": "پذیرفته: TXT، MD، CSV، PDF، PY، JS، IPYNB، GeoJSON، GPKG، GeoTIFF (DOCX هنوز پشتیبانی نمی‌شود)",
+    "dropTitle": "فایل را اینجا رها کنید یا کلیک کنید",
+    "dropHint": "فایل‌ها به‌صورت محلی تجزیه، بخش‌بندی و ذخیره می‌شوند",
+    "processing": "در حال پردازش {{name}}…",
+    "successTitle": "{{name}} وارد شد — {{count}} بخش",
+    "duplicateTitle": "{{name}} نادیده گرفته شد — قبلاً وارد شده",
+    "duplicateBody": "محتوای یکسان (تطبیق SHA-256) از قبل در فضای کاری هست.",
+    "failed": "ورود داده ناموفق بود",
+    "noCollection": "ابتدا یک مجموعه بسازید."
+  },
+  "assets": {
+    "title": "دارایی‌ها",
+    "allCollections": "همه مجموعه‌ها",
+    "empty": "هنوز دارایی‌ای نیست. فایل وارد کنید تا فضای کاری پر شود.",
+    "kind": "نوع",
+    "titleCol": "عنوان",
+    "collection": "مجموعه",
+    "created": "ایجاد",
+    "revision": "نسخه",
+    "hash": "SHA-256",
+    "mime": "نوع MIME",
+    "size": "حجم (بایت)",
+    "segments": "بخش‌ها",
+    "scenes": "صحنه‌ها",
+    "layers": "لایه‌ها"
   }
 }

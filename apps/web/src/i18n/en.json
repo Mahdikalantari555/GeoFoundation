@@ -83,5 +83,45 @@
     "llmKeyEnv": "API key env var",
     "llmKeyHint": "The API key itself is read from the server environment only — never stored or sent through this UI.",
     "saved": "Saved"
+  },
+  "collections": {
+    "title": "Collections",
+    "new": "New collection",
+    "namePlaceholder": "Collection name",
+    "descriptionPlaceholder": "Description (optional)",
+    "empty": "No collections yet. Create one to start ingesting.",
+    "archive": "Archive",
+    "archiveConfirm": "Archive collection \"{{name}}\"? Its assets stay in the workspace.",
+    "viewAssets": "View assets"
+  },
+  "ingest": {
+    "title": "Ingest",
+    "collection": "Collection",
+    "indexAfter": "Index after ingest",
+    "formats": "Accepted: TXT, MD, CSV, PDF, PY, JS, IPYNB, GeoJSON, GPKG, GeoTIFF (DOCX not yet supported)",
+    "dropTitle": "Drop a file here or click to browse",
+    "dropHint": "Files are parsed, chunked, and stored locally",
+    "processing": "Processing {{name}}…",
+    "successTitle": "{{name}} ingested — {{count}} segments",
+    "duplicateTitle": "{{name}} skipped — already ingested",
+    "duplicateBody": "Identical content (SHA-256 match) is already in the workspace.",
+    "failed": "Ingest failed",
+    "noCollection": "Create a collection first."
+  },
+  "assets": {
+    "title": "Assets",
+    "allCollections": "All collections",
+    "empty": "No assets yet. Ingest files to populate the workspace.",
+    "kind": "Kind",
+    "titleCol": "Title",
+    "collection": "Collection",
+    "created": "Created",
+    "revision": "Revision",
+    "hash": "SHA-256",
+    "mime": "MIME type",
+    "size": "Size (bytes)",
+    "segments": "Segments",
+    "scenes": "Scenes",
+    "layers": "Layers"
   }
 }
