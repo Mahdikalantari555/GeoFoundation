@@ -17,6 +17,7 @@ from .errors import (
     validation_exception_handler,
 )
 from .health import router as health_router
+from .routers.workspace import router as workspace_router
 
 API_PREFIX = "/api/v1"
 
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(health_router, prefix=API_PREFIX)
+    app.include_router(workspace_router, prefix=API_PREFIX)
 
     app.add_exception_handler(GeoFrontError, geofront_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)

@@ -35,11 +35,16 @@ class AppState:
         return self.workspace is not None
 
     async def close(self) -> None:
+        """Close the active workspace (acquires the write lock)."""
+        async with self.write_lock:
+            await self._close_locked()
+
+    async def _close_locked(self) -> None:
+        """Close the active workspace. Caller must hold the write lock."""
         ws = self.workspace
         if ws is None:
             return
-        async with self.write_lock:
-            await asyncio.to_thread(ws.close)
+        await asyncio.to_thread(ws.close)
         self.workspace = None
         self.workspace_path = None
 
