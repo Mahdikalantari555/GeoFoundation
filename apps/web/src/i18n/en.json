@@ -49,5 +49,39 @@
   "placeholder": {
     "title": "Coming soon",
     "body": "This page lands in an upcoming milestone."
+  },
+  "overview": {
+    "title": "Overview",
+    "collections": "Collections",
+    "assets": "Assets",
+    "segments": "Segments",
+    "storage": "Storage",
+    "rawStats": "Workspace stats (raw)",
+    "feedbackHint": "Feedback counts and index manifest appear here as they become available."
+  },
+  "workspace": {
+    "namePlaceholder": "Workspace name",
+    "pathPlaceholder": "/path/to/workspace"
+  },
+  "settings": {
+    "title": "Workspace Settings",
+    "general": "General",
+    "models": "Model Paths",
+    "llm": "LLM Compute",
+    "name": "Name",
+    "language": "Language",
+    "offline": "Offline mode",
+    "batchSize": "Batch size",
+    "threadCount": "Thread count",
+    "modelPath": "LLM GGUF path",
+    "embeddingPath": "Embedding GGUF path",
+    "visionPath": "Vision GGUF path",
+    "llmProvider": "Provider",
+    "llmBaseUrl": "API base URL",
+    "llmModelId": "Model ID",
+    "llmContextWindow": "Context window",
+    "llmKeyEnv": "API key env var",
+    "llmKeyHint": "The API key itself is read from the server environment only — never stored or sent through this UI.",
+    "saved": "Saved"
   }
 }

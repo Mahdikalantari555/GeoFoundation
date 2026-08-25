@@ -1,14 +1,16 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from './AppShell'
 import { PlaceholderPage } from '@/components/PlaceholderPage'
+import { OverviewPage } from '@/features/workspace/OverviewPage'
+import { SettingsPage } from '@/features/workspace/SettingsPage'
 
 export const routes = [
   {
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <PlaceholderPage milestone="M1" /> },
-      { path: 'settings', element: <PlaceholderPage milestone="M1" /> },
+      { index: true, element: <OverviewPage /> },
+      { path: 'settings', element: <SettingsPage /> },
       { path: 'doctor', element: <PlaceholderPage milestone="M4" /> },
       { path: 'collections', element: <PlaceholderPage milestone="M2" /> },
       { path: 'ingest', element: <PlaceholderPage milestone="M2" /> },

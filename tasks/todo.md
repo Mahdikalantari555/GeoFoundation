@@ -19,11 +19,11 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 
 ## M1 — Workspace
 
-- [ ] Task: workspace routes (create/open/close, settings GET/PUT, stats)
+- [x] Task: workspace routes (create/open/close, settings GET/PUT, stats)
   - Acceptance: lifecycle round-trip via httpx; 409s covered
   - Verify: pytest server/tests/test_workspace.py
   - Files: server/routers/workspace.py, tests
-- [ ] Task: Overview + Settings pages
+- [x] Task: Overview + Settings pages
   - Acceptance: stats cards render; settings form persists
   - Verify: pnpm build + manual smoke (en/fa)
   - Files: apps/web/src/features/{overview,settings}/**

@@ -38,10 +38,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspace/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Workspace */
+        post: operations["create_workspace_api_v1_workspace_create_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open Workspace */
+        post: operations["open_workspace_api_v1_workspace_open_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Workspace */
+        post: operations["close_workspace_api_v1_workspace_close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Workspace */
+        get: operations["get_workspace_api_v1_workspace_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workspace Stats */
+        get: operations["workspace_stats_api_v1_workspace_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Settings */
+        put: operations["update_settings_api_v1_workspace_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CreateWorkspaceRequest */
+        CreateWorkspaceRequest: {
+            /** Path */
+            path: string;
+            /**
+             * Name
+             * @default GeoMemory Workspace
+             */
+            name: string;
+            /** Language */
+            language?: string | null;
+            /**
+             * Offline
+             * @default true
+             */
+            offline: boolean;
+            /** Model Path */
+            model_path?: string | null;
+            /** Embedding Path */
+            embedding_path?: string | null;
+            /** Vision Path */
+            vision_path?: string | null;
+            /** Default Collection */
+            default_collection?: string | null;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HealthLLM */
         HealthLLM: {
             /** Provider */
@@ -77,6 +209,67 @@ export interface components {
             path?: string | null;
             /** Name */
             name?: string | null;
+        };
+        /** OpenWorkspaceRequest */
+        OpenWorkspaceRequest: {
+            /** Path */
+            path: string;
+        };
+        /** UpdateSettingsRequest */
+        UpdateSettingsRequest: {
+            /** Name */
+            name?: string | null;
+            /** Language */
+            language?: string | null;
+            /** Offline */
+            offline?: boolean | null;
+            /** Model Path */
+            model_path?: string | null;
+            /** Embedding Path */
+            embedding_path?: string | null;
+            /** Vision Path */
+            vision_path?: string | null;
+            /** Default Collection */
+            default_collection?: string | null;
+            /** Batch Size */
+            batch_size?: number | null;
+            /** Thread Count */
+            thread_count?: number | null;
+            /** Llm Provider */
+            llm_provider?: string | null;
+            /** Llm Api Base Url */
+            llm_api_base_url?: string | null;
+            /** Llm Api Key Env */
+            llm_api_key_env?: string | null;
+            /** Llm Model Id */
+            llm_model_id?: string | null;
+            /** Llm Context Window */
+            llm_context_window?: number | null;
+            /** Embedding Backend */
+            embedding_backend?: string | null;
+            /** St Model Name */
+            st_model_name?: string | null;
+            /** Vector Backend */
+            vector_backend?: string | null;
+            /** Qdrant Url */
+            qdrant_url?: string | null;
+            /** Qdrant Api Key */
+            qdrant_api_key?: string | null;
+            /** Pdf Parser */
+            pdf_parser?: string | null;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -123,6 +316,177 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    create_workspace_api_v1_workspace_create_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_workspace_api_v1_workspace_open_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_workspace_api_v1_workspace_close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_workspace_api_v1_workspace_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    workspace_stats_api_v1_workspace_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    update_settings_api_v1_workspace_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

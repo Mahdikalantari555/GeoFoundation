@@ -49,5 +49,39 @@
   "placeholder": {
     "title": "به‌زودی",
     "body": "این صفحه در مرحله بعدی ساخته می‌شود."
+  },
+  "overview": {
+    "title": "نمای کلی",
+    "collections": "مجموعه‌ها",
+    "assets": "دارایی‌ها",
+    "segments": "بخش‌ها",
+    "storage": "حجم ذخیره‌سازی",
+    "rawStats": "آمار فضای کاری (خام)",
+    "feedbackHint": "شمار بازخوردها و وضعیت نمایه پس از در دسترس شدن اینجا نمایش داده می‌شود."
+  },
+  "workspace": {
+    "namePlaceholder": "نام فضای کاری",
+    "pathPlaceholder": "/مسیر/فضای-کاری"
+  },
+  "settings": {
+    "title": "تنظیمات فضای کاری",
+    "general": "عمومی",
+    "models": "مسیر مدل‌ها",
+    "llm": "موتور زبانی",
+    "name": "نام",
+    "language": "زبان",
+    "offline": "حالت آفلاین",
+    "batchSize": "اندازه دسته",
+    "threadCount": "تعداد رشته‌ها",
+    "modelPath": "مسیر GGUF مدل زبانی",
+    "embeddingPath": "مسیر GGUF جاسازی",
+    "visionPath": "مسیر GGUF بینایی",
+    "llmProvider": "تأمین‌کننده",
+    "llmBaseUrl": "نشانی پایه API",
+    "llmModelId": "شناسه مدل",
+    "llmContextWindow": "پنجره متن",
+    "llmKeyEnv": "متغیر محیطی کلید API",
+    "llmKeyHint": "خود کلید API فقط از محیط سرور خوانده می‌شود — هرگز در این رابط ذخیره یا ارسال نمی‌شود.",
+    "saved": "ذخیره شد"
   }
 }
