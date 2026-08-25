@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -94,10 +95,8 @@ class JobManager:
             if not task.done():
                 task.cancel()
         for task in self._tasks.values():
-            try:
+            with contextlib.suppress(BaseException):
                 await task
-            except (asyncio.CancelledError, Exception):  # noqa: BLE001
-                pass
 
 
 _manager: JobManager | None = None

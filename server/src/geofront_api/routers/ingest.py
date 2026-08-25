@@ -5,6 +5,7 @@ import binascii
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -83,10 +84,10 @@ async def _submit(ws: GeoMemory, filename: str, data: bytes, collection_id: str,
 
 @router.post("/ingest", status_code=202)
 async def ingest_file(
-    file: UploadFile = File(...),
-    collection_id: str = Form(...),
-    index_after: bool = Form(True),
-    parser: str | None = Form(None),
+    file: Annotated[UploadFile, File()],
+    collection_id: Annotated[str, Form()],
+    index_after: Annotated[bool, Form()] = True,
+    parser: Annotated[str | None, Form()] = None,
 ) -> dict[str, str]:
     ws = _require_ws()
     _check_extension(file.filename or "")
