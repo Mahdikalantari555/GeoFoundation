@@ -261,10 +261,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search
+         * @description Hybrid (sparse/dense/hybrid) retrieval with optional filters.
+         *
+         *     Search persists a retrieval run, so it runs behind the platform write lock.
+         */
+        post: operations["search_api_v1_search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask
+         * @description Grounded QA: retrieve → answer with citations, or abstain.
+         *
+         *     Abstention is a normal 200 outcome (`abstained: true` + reason), never an
+         *     error. The lib persists runs/answers/citations, so the call runs behind
+         *     the platform write lock.
+         */
+        post: operations["ask_api_v1_ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Feedback
+         * @description Record an immutable feedback event (search hit thumbs, answer ratings).
+         */
+        post: operations["record_feedback_api_v1_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Events
+         * @description Server-sent events: `hello`, `job_progress`, `asset_created`,
+         *     `collection_created`, `collection_archived`, `workspace_changed`.
+         *
+         *     Clients refetch state on events; a `: ping` comment every 15s keeps the
+         *     connection alive through proxies.
+         */
+        get: operations["events_api_v1_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AskRequest */
+        AskRequest: {
+            /** Question */
+            question: string;
+            /**
+             * Mode
+             * @default grounded_qa
+             * @enum {string}
+             */
+            mode: "grounded_qa" | "research" | "code";
+            /** Collections */
+            collections?: string[] | null;
+            /** Sensor */
+            sensor?: string[] | null;
+            spatial?: components["schemas"]["SpatialFilterRequest"] | null;
+            temporal?: components["schemas"]["TemporalFilterRequest"] | null;
+        };
         /** Body_ingest_file_api_v1_ingest_post */
         Body_ingest_file_api_v1_ingest_post: {
             /** File */
@@ -310,6 +417,34 @@ export interface components {
             vision_path?: string | null;
             /** Default Collection */
             default_collection?: string | null;
+        };
+        /**
+         * FeedbackRequest
+         * @description Immutable feedback event (answer rating, source relevance, …).
+         */
+        FeedbackRequest: {
+            /**
+             * Target Type
+             * @enum {string}
+             */
+            target_type: "answer" | "retrieval_run" | "segment" | "citation";
+            /** Target Id */
+            target_id: string;
+            /** Label */
+            label: string;
+            /**
+             * Actor
+             * @default user
+             */
+            actor: string;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -372,6 +507,72 @@ export interface components {
         OpenWorkspaceRequest: {
             /** Path */
             path: string;
+        };
+        /** SearchRequest */
+        SearchRequest: {
+            /** Query */
+            query: string;
+            /**
+             * Mode
+             * @default hybrid
+             * @enum {string}
+             */
+            mode: "sparse" | "dense" | "hybrid";
+            /**
+             * Top K
+             * @default 20
+             */
+            top_k: number;
+            /**
+             * Top N
+             * @default 5
+             */
+            top_n: number;
+            /** Collections */
+            collections?: string[] | null;
+            /** Sensor */
+            sensor?: string[] | null;
+            spatial?: components["schemas"]["SpatialFilterRequest"] | null;
+            temporal?: components["schemas"]["TemporalFilterRequest"] | null;
+        };
+        /**
+         * SpatialFilterRequest
+         * @description BBox or geometry reference; mirrors the lib SpatialFilter contract.
+         */
+        SpatialFilterRequest: {
+            /**
+             * Op
+             * @default intersects
+             * @enum {string}
+             */
+            op: "intersects" | "within" | "contains" | "distance_lte";
+            /** Geometry Id */
+            geometry_id?: string | null;
+            /** Bbox */
+            bbox?: [
+                number,
+                number,
+                number,
+                number
+            ] | null;
+            /** Distance M */
+            distance_m?: number | null;
+        };
+        /**
+         * TemporalFilterRequest
+         * @description Range filter over an explicit time field (`from`/`to` as ISO date strings).
+         */
+        TemporalFilterRequest: {
+            /**
+             * Field
+             * @default observed_at
+             * @enum {string}
+             */
+            field: "acquired_at" | "observed_at" | "published_at" | "ingested_at";
+            /** From */
+            from?: string | null;
+            /** To */
+            to?: string | null;
         };
         /** UpdateSettingsRequest */
         UpdateSettingsRequest: {
@@ -937,6 +1138,131 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_v1_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_api_v1_ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_feedback_api_v1_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    events_api_v1_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

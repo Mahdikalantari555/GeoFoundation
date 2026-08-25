@@ -6,6 +6,8 @@ import { SettingsPage } from '@/features/workspace/SettingsPage'
 import { CollectionsPage } from '@/features/knowledge/CollectionsPage'
 import { IngestPage } from '@/features/knowledge/IngestPage'
 import { AssetsPage } from '@/features/knowledge/AssetsPage'
+import { SearchPage } from '@/features/search/SearchPage'
+import { AskPage } from '@/features/ask/AskPage'
 
 export const routes = [
   {
@@ -17,8 +19,8 @@ export const routes = [
       { path: 'doctor', element: <PlaceholderPage milestone="M4" /> },
       { path: 'collections', element: <CollectionsPage /> },
       { path: 'ingest', element: <IngestPage /> },
-      { path: 'search', element: <PlaceholderPage milestone="M3" /> },
-      { path: 'ask', element: <PlaceholderPage milestone="M3" /> },
+      { path: 'search', element: <SearchPage /> },
+      { path: 'ask', element: <AskPage /> },
       { path: 'assets', element: <AssetsPage /> },
       { path: 'index', element: <PlaceholderPage milestone="M4" /> },
       { path: 'feedback', element: <PlaceholderPage milestone="M4" /> },

@@ -123,5 +123,65 @@
     "segments": "Segments",
     "scenes": "Scenes",
     "layers": "Layers"
+  },
+  "search": {
+    "title": "Search",
+    "queryPlaceholder": "Search the workspace…",
+    "run": "Search",
+    "modes": {
+      "sparse": "Sparse (FTS)",
+      "dense": "Dense (vector)",
+      "hybrid": "Hybrid"
+    },
+    "closedWorkspace": "Open a workspace to search.",
+    "runFirst": "Type a query and press Search — results appear here with score breakdowns.",
+    "noResults": "No results. Try a different query or relax the filters.",
+    "resultsCount": "{{count}} hits · {{ms}} ms",
+    "filters": {
+      "show": "Filters",
+      "hide": "Hide filters",
+      "topN": "Max results",
+      "collections": "Collections",
+      "sensor": "Sensors",
+      "sensorHint": "e.g. Sentinel-2, Landsat-8",
+      "spatial": "Spatial filter (bbox)",
+      "temporal": "Temporal filter",
+      "field": "Time field",
+      "from": "From",
+      "to": "To",
+      "clear": "Clear",
+      "bboxPicker": "Drag on the map to draw a bounding box; click to clear",
+      "minLon": "min lon",
+      "minLat": "min lat",
+      "maxLon": "max lon",
+      "maxLat": "max lat"
+    },
+    "hits": {
+      "score": "score",
+      "sparse": "sparse",
+      "dense": "dense"
+    },
+    "feedback": {
+      "up": "Relevant",
+      "down": "Not relevant"
+    }
+  },
+  "ask": {
+    "title": "Ask",
+    "modeLabel": "Answer mode",
+    "placeholder": "Ask a question about your data…",
+    "send": "Send",
+    "thinking": "Retrieving context…",
+    "emptyChat": "Ask a question to get a grounded answer with citations.",
+    "modes": {
+      "grounded_qa": "Grounded QA",
+      "research": "Research",
+      "code": "Code"
+    },
+    "abstainedTitle": "No answer provided",
+    "configureHint": "The LLM is unavailable. Configure it in Workspace settings, or set the API key on the server.",
+    "citations": "Citations",
+    "showSources": "Show sources ({{count}})",
+    "sourcesTitle": "Sources"
   }
 }

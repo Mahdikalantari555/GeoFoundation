@@ -2,9 +2,11 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { HealthPill } from './HealthPill'
 import { LanguageToggle } from './LanguageToggle'
+import { useEvents } from './useEvents'
 import { WorkspaceSwitcher } from '@/features/workspace/WorkspaceSwitcher'
 
 export function AppShell() {
+  useEvents()
   return (
     <div className="flex h-screen overflow-hidden" data-testid="app-shell">
       <Sidebar />
