@@ -27,8 +27,8 @@ from geomemory.rs.raster.spectral import (
 from geomemory.rs.raster.tiler import (
     window_bounds,
     window_grid,
-    window_only_tiles,
     window_transform,
+    window_only_tiles,
 )
 
 
@@ -46,10 +46,10 @@ class FakeDataset:
         self.dtypes = kw.get("dtypes", ["uint16"] * 3)
         self.width = kw.get("width", 100)
         self.height = kw.get("height", 100)
-        self.nodata = kw.get("nodata")
+        self.nodata = kw.get("nodata", None)
         self.descriptions = kw.get("descriptions", [])
         self._tags = kw.get("tags", {})
-        self._array = kw.get("array")
+        self._array = kw.get("array", None)
         self._closed = False
 
     def tags(self):

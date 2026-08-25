@@ -1,5 +1,6 @@
 """Golden NDVI module for ingestion tests."""
 
+import numpy as np
 
 
 def compute_ndvi(nir, red):

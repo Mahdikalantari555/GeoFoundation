@@ -17,8 +17,8 @@ import tempfile
 from pathlib import Path
 
 from geomemory import GeoMemory
-from geomemory.eval.reporter import json_report
 from geomemory.eval.runner import BenchmarkRunner
+from geomemory.eval.reporter import json_report
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "tests" / "golden" / "fixtures"

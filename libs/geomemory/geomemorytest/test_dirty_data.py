@@ -7,30 +7,35 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from pathlib import Path
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from geomemory.core.hashing import sha256_bytes
 from geomemory.core.models import (
     Asset,
     AssetRevision,
     Collection,
+    EmbeddingRecord,
     Job,
+    QAResult,
     SearchFilters,
     SearchHit,
     Segment,
     SpatialFilter,
     TemporalFilter,
 )
+from geomemory.core.hashing import sha256_bytes
+from geomemory.storage.object_store import ObjectStore
 from geomemory.retrieval.deduplicator import deduplicate, enforce_diversity
 from geomemory.retrieval.fusion import linear_fuse, rrf_fuse
 from geomemory.retrieval.query_parser import QueryParser
 from geomemory.retrieval.spatial_filter import apply_spatial_filter, spatial_ids
 from geomemory.retrieval.temporal_filter import apply_temporal_filter, time_in_range
-from geomemory.storage.object_store import ObjectStore
 from geomemory.storage.repositories.asset_repo import AssetRepository
 from geomemory.storage.repositories.segment_repo import SegmentRepository
+
 
 # ===========================================================================
 # Model validation: bad inputs must fail loudly, not silently corrupt
@@ -84,7 +89,7 @@ class TestHashingEdgeCases:
         assert sha256_bytes(b"") == expected
 
     def test_unicode_bytes_hash(self):
-        data = "سلام".encode()
+        data = "سلام".encode("utf-8")
         assert sha256_bytes(data) == hashlib.sha256(data).hexdigest()
 
     def test_large_blob_hash(self):

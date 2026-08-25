@@ -25,12 +25,13 @@ from geomemory.core.models import (
     FeedbackEvent,
     GenerationRequest,
     GenerationResult,
+    GeoMemoryModel,
     IndexManifest,
     IndexRecord,
     Job,
     Observation,
-    ParsedObject,
     QAResult,
+    ParsedObject,
     QueryPlan,
     RasterScene,
     RasterTile,
@@ -51,6 +52,7 @@ from geomemory.core.models import (
     WorkspaceConfig,
     WorkspaceSettings,
 )
+
 
 # ===========================================================================
 # Base model contract

@@ -2,11 +2,12 @@ import pytest
 
 pytest.importorskip("geomemory")
 
+from geomemory import GeoMemory
+
 from geoagent.config import AgentSettings
 from geoagent.registry import Registry, RunContext
 from geoagent.store import Store
 from geoagent.tools import memory_tools
-from geomemory import GeoMemory
 
 
 @pytest.fixture()

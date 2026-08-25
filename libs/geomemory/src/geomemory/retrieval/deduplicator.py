@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable
+from typing import Callable
 
 from geomemory.core.models import SearchHit
 

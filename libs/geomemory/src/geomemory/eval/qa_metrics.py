@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from typing import Iterable
 
 from geomemory.core.models import Citation
 from geomemory.qa.abstention import should_abstain

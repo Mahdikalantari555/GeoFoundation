@@ -13,16 +13,16 @@ import os
 from pathlib import Path
 
 import streamlit as st
-from pages.ask import render as render_ask
-from pages.assets import render as render_assets
-from pages.eval import render as render_eval
-from pages.feedback import render as render_feedback
-from pages.ingest import render as render_ingest
-from pages.overview import render as render_overview
-from pages.search import render as render_search
-from pages.settings import render as render_settings
 
 from geomemory import GeoMemory
+from pages.overview import render as render_overview
+from pages.search import render as render_search
+from pages.ask import render as render_ask
+from pages.assets import render as render_assets
+from pages.ingest import render as render_ingest
+from pages.feedback import render as render_feedback
+from pages.eval import render as render_eval
+from pages.settings import render as render_settings
 
 st.set_page_config(
     page_title="GeoMemory",

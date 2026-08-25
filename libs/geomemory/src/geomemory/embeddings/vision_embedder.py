@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Protocol
+from typing import Any, Protocol, Sequence
 
 import numpy as np
 

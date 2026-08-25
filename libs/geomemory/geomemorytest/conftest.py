@@ -1,9 +1,13 @@
 """Root conftest for the geomemorytest suite."""
 from __future__ import annotations
 
+import hashlib
+import sqlite3
 import sys
+import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 # Ensure the GeoMemory src package is importable even when tests are run from
@@ -12,8 +16,24 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from geomemory.storage.database import connect, initialize  # noqa: E402
+from geomemory.core.models import (  # noqa: E402
+    Asset,
+    Collection,
+    EmbeddingRecord,
+    IndexRecord,
+    Job,
+    Observation,
+    QAResult,
+    SearchHit,
+    SearchResult,
+    Segment,
+    SpatialFilter,
+    TemporalFilter,
+)
+from geomemory.core.hashing import sha256_bytes  # noqa: E402
 from geomemory.storage.object_store import ObjectStore  # noqa: E402
+from geomemory.storage.database import connect, initialize  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # Shared fixtures

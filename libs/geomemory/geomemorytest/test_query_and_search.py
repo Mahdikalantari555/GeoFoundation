@@ -1,7 +1,10 @@
 """Tests for the SearchService query-plan pipeline."""
 from __future__ import annotations
 
+import pytest
+
 from geomemory.core.models import SearchHit, SearchResult
+from geomemory.retrieval.fusion import linear_fuse, rrf_fuse
 from geomemory.retrieval.query_parser import QueryParser
 from geomemory.retrieval.search_service import SearchService
 

@@ -10,11 +10,14 @@ from geomemory.core.models import (
     SearchFilters,
     SearchHit,
     SearchResult,
+    Segment,
     SpatialFilter,
     TemporalFilter,
 )
-from geomemory.retrieval.query_parser import QueryParser
 from geomemory.retrieval.search_service import SearchService
+from geomemory.retrieval.query_parser import QueryParser
+from geomemory.storage.repositories.segment_repo import SegmentRepository
+from geomemory.storage.object_store import ObjectStore
 from geomemory.storage.database import connect, initialize
 
 

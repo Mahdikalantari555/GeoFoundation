@@ -123,8 +123,8 @@ class TestNdcgAtK:
 # QA metrics
 # ---------------------------------------------------------------------------
 from geomemory.eval.qa_metrics import (
-    abstain_rate,
     abstention_accuracy,
+    abstain_rate,
     citation_correctness,
     faithfulness_proxy,
 )
@@ -293,7 +293,7 @@ class TestValidateCitations:
 # ---------------------------------------------------------------------------
 # Benchmark module
 # ---------------------------------------------------------------------------
-from geomemory.eval.benchmark import BenchmarkItem, load_benchmark, to_jsonl
+from geomemory.eval.benchmark import Benchmark, BenchmarkItem, load_benchmark, to_jsonl
 
 
 class TestBenchmarkItem:

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from geomemory.core.models import BenchmarkConfig, DatasetExample
 from geomemory.feedback.exporters.dataset_card import build_dataset_card

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Callable
 
 from geomemory.core.models import Job
 from geomemory.ingest.job_queue import JobQueue

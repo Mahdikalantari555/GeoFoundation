@@ -6,6 +6,7 @@ geopandas, plus the reader/tiler/vector helpers with injected fake backends.
 from __future__ import annotations
 
 import sys
+import types
 from pathlib import Path
 from unittest import mock
 
@@ -345,8 +346,8 @@ class TestBuildTiles:
 
     def test_non_epsg_no_footprint(self):
         """Tiles in a non-EPSG:4326 CRS should not get a footprint."""
-        from geomemory.rs.raster.metadata import RasterSceneData
         from geomemory.rs.raster.tiler import build_tiles
+        from geomemory.rs.raster.metadata import RasterSceneData
         scene = RasterSceneData(
             width=256, height=256, crs="EPSG:3857",
             bbox=[0.0, 0.0, 1.0, 1.0],
@@ -393,8 +394,8 @@ class TestVectorReader:
 
     def test_empty_dataframe_returns_geometry_collection(self):
         pytest.importorskip("geopandas")
-        import pandas as pd  # type: ignore[import]
         from geopandas import GeoDataFrame  # type: ignore[import]
+        import pandas as pd  # type: ignore[import]
         gdf = GeoDataFrame(pd.DataFrame({"col": []}), geometry=[], crs="EPSG:4326")
         result, _ = self._read(gdf)
         assert result.geometry_type == "GeometryCollection"

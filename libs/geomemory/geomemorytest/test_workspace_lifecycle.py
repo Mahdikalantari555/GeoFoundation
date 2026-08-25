@@ -5,11 +5,14 @@ CRUD, event emission, stats on a fresh workspace, and the doctor helpers.
 """
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 from geomemory import GeoMemory, WorkspaceNotFoundError
 from geomemory.core.events import COLLECTION_CREATED, DomainEvent, EventBus
 from geomemory.services.doctor import doctor_environment, doctor_workspace, doctor_workspace_open
+
 
 # ===========================================================================
 # Helpers

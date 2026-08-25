@@ -40,7 +40,7 @@ class _StCall:
     def __exit__(self, *args):
         return False
 
-    def _col(self, n: int) -> _StCall:
+    def _col(self, n: int) -> "_StCall":
         col = _StCall()
         col._parent_calls = self.calls  # share parent call log
         return col
@@ -93,7 +93,7 @@ class _StCall:
             return self
         return _record
 
-    def _expander_stub(self) -> _StCall:
+    def _expander_stub(self) -> "_StCall":
         """Return a context-manager stub for st.expander."""
         return self
 
@@ -201,16 +201,7 @@ def fake_workspace():
 def _import_pages():
     """Import page renderers, returning their render callables."""
     from apps.dashboard.pages import (  # noqa: F401  (registers submodules)
-        ask,
-        assets,
-        feedback,
-        ingest,
-        overview,
-        search,
-        settings,
-    )
-    from apps.dashboard.pages import (
-        eval as eval_page,
+        ask, assets, eval as eval_page, feedback, ingest, overview, search, settings,
     )
     return {
         "overview": overview.render,
@@ -426,6 +417,7 @@ class TestSettingsPage:
         assert _STUB.call_count("json") >= 1
 
     def test_render_handles_doctor_error(self, fake_workspace):
+        import apps.dashboard.pages.settings as settings_mod
         import geomemory.services.doctor as doctor_mod
 
         original = doctor_mod.doctor_workspace_open

@@ -7,10 +7,7 @@ from pathlib import Path
 
 from geomemory.core.models import DatasetExample, FeedbackEvent
 from geomemory.feedback.exporters import export_jsonl
-from geomemory.storage.repositories.feedback_repo import (
-    DatasetExampleRepository,
-    FeedbackRepository,
-)
+from geomemory.storage.repositories.feedback_repo import DatasetExampleRepository, FeedbackRepository
 
 
 class FeedbackService:

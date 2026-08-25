@@ -2,12 +2,12 @@
 in ``geomemorytest/data/``."""
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
 
 from geomemory.core.models import SourceRef
-from geomemory.ingest.chunkers import HeaderThenTokenChunker
 from geomemory.ingest.loaders import (
     CodeLoader,
     NotebookLoader,
@@ -15,6 +15,9 @@ from geomemory.ingest.loaders import (
     TextLoader,
     get_loader,
 )
+from geomemory.ingest.chunkers import HeaderThenTokenChunker
+from geomemory.services.ingestion_service import IngestionService
+
 
 DATA = Path(__file__).resolve().parent / "data"
 

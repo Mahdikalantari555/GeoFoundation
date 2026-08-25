@@ -1,6 +1,9 @@
 """Eval page — run benchmarks and visualize retrieval/QA metrics."""
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
 import streamlit as st
 
 from geomemory import GeoMemory

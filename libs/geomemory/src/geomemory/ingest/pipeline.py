@@ -13,13 +13,12 @@ from geomemory.core.hashing import sha256_bytes
 from geomemory.core.models import (
     Asset,
     AssetRevision,
+    ParsedObject,
     Segment,
     SourceRef,
 )
-from geomemory.ingest.chunkers import DEFAULT_CHUNKER
-from geomemory.ingest.chunkers import default_registry as default_chunker_registry
-from geomemory.ingest.loaders import default_registry as default_loader_registry
-from geomemory.ingest.loaders import get_loader
+from geomemory.ingest.chunkers import DEFAULT_CHUNKER, default_registry as default_chunker_registry
+from geomemory.ingest.loaders import default_registry as default_loader_registry, get_loader
 from geomemory.ingest.loaders.base import mime_for_path
 from geomemory.storage.object_store import ObjectStore
 

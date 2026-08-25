@@ -6,8 +6,6 @@ from geomemory.ingest.chunkers import (
     DEFAULT_CHUNKER,
     FixedSizeChunker,
     HeaderThenTokenChunker,
-)
-from geomemory.ingest.chunkers import (
     default_registry as default_chunker_registry,
 )
 from geomemory.ingest.loaders import (
@@ -16,10 +14,8 @@ from geomemory.ingest.loaders import (
     NotebookLoader,
     PdfLoader,
     TextLoader,
-    get_loader,
-)
-from geomemory.ingest.loaders import (
     default_registry as default_loader_registry,
+    get_loader,
 )
 
 __all__ = [

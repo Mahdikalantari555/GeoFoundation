@@ -7,7 +7,7 @@ retrieved id list. Rank is 1-based.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable
+from typing import Iterable
 
 
 def recall_at_k(relevant: Iterable[str], retrieved: list[str], k: int | None = None) -> float:
