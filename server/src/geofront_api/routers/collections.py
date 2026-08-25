@@ -5,6 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 from geomemory import CollectionNotFoundError, GeoMemory, GeoMemoryError
 
 from ..errors import GeoFrontError
+from ..events import get_event_bus
 from ..schemas import CreateCollectionRequest
 from ..state import get_state
 
@@ -39,6 +40,9 @@ async def create_collection(req: CreateCollectionRequest) -> dict[str, object]:
         )
     except GeoMemoryError as exc:
         raise GeoFrontError(code="collection_create_failed", message=str(exc)) from exc
+    get_event_bus().publish(
+        "collection_created", {"id": col.id, "name": col.name}
+    )
     return col.model_dump(mode="json")
 
 
@@ -60,4 +64,5 @@ async def archive_collection(collection_id: str) -> dict[str, object]:
         raise _not_found(collection_id) from exc
     if not archived:
         raise _not_found(collection_id)
+    get_event_bus().publish("collection_archived", {"id": collection_id})
     return {"archived": True, "id": collection_id}

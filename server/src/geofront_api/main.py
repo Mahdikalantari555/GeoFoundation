@@ -16,10 +16,15 @@ from .errors import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
+from .events import get_event_bus
 from .health import router as health_router
+from .routers.ask import router as ask_router
 from .routers.collections import router as collections_router
+from .routers.events import router as events_router
+from .routers.feedback import router as feedback_router
 from .routers.ingest import router as ingest_router
 from .routers.jobs import router as jobs_router
+from .routers.search import router as search_router
 from .routers.workspace import router as workspace_router
 
 API_PREFIX = "/api/v1"
@@ -32,6 +37,9 @@ DEV_ORIGINS = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    import asyncio
+
+    get_event_bus().bind(asyncio.get_running_loop())
     yield
     from .jobs import get_job_manager
     from .state import get_state
@@ -64,10 +72,14 @@ def create_app() -> FastAPI:
     app.include_router(collections_router, prefix=API_PREFIX)
     app.include_router(ingest_router, prefix=API_PREFIX)
     app.include_router(jobs_router, prefix=API_PREFIX)
+    app.include_router(search_router, prefix=API_PREFIX)
+    app.include_router(ask_router, prefix=API_PREFIX)
+    app.include_router(feedback_router, prefix=API_PREFIX)
+    app.include_router(events_router, prefix=API_PREFIX)
 
     app.add_exception_handler(GeoFrontError, geofront_error_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
     return app

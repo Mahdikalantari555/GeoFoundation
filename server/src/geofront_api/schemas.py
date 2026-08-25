@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -92,3 +92,65 @@ class UpdateSettingsRequest(BaseModel):
     qdrant_url: str | None = None
     qdrant_api_key: str | None = None
     pdf_parser: str | None = Field(default=None, pattern="^(auto|opendataloader|pymupdf)$")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Search / Ask / Feedback
+
+
+class SpatialFilterRequest(BaseModel):
+    """BBox or geometry reference; mirrors the lib SpatialFilter contract."""
+
+    model_config = {"extra": "forbid"}
+
+    op: Literal["intersects", "within", "contains", "distance_lte"] = "intersects"
+    geometry_id: str | None = None
+    bbox: tuple[float, float, float, float] | None = None  # min_lon, min_lat, max_lon, max_lat
+    distance_m: float | None = Field(default=None, ge=0)
+
+
+class TemporalFilterRequest(BaseModel):
+    """Range filter over an explicit time field (`from`/`to` as ISO date strings)."""
+
+    model_config = {"extra": "forbid"}
+
+    field: Literal["acquired_at", "observed_at", "published_at", "ingested_at"] = "observed_at"
+    from_: str | None = Field(default=None, alias="from")
+    to: str | None = None
+
+
+class SearchRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    query: str = Field(min_length=1, max_length=2000)
+    mode: Literal["sparse", "dense", "hybrid"] = "hybrid"
+    top_k: int = Field(default=20, ge=1, le=500)
+    top_n: int = Field(default=5, ge=1, le=100)
+    collections: list[str] | None = None
+    sensor: list[str] | None = None
+    spatial: SpatialFilterRequest | None = None
+    temporal: TemporalFilterRequest | None = None
+
+
+class AskRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    question: str = Field(min_length=1, max_length=4000)
+    mode: Literal["grounded_qa", "research", "code"] = "grounded_qa"
+    collections: list[str] | None = None
+    sensor: list[str] | None = None
+    spatial: SpatialFilterRequest | None = None
+    temporal: TemporalFilterRequest | None = None
+
+
+class FeedbackRequest(BaseModel):
+    """Immutable feedback event (answer rating, source relevance, …)."""
+
+    model_config = {"extra": "forbid"}
+
+    target_type: Literal["answer", "retrieval_run", "segment", "citation"]
+    target_id: str = Field(min_length=1, max_length=128)
+    label: str = Field(min_length=1, max_length=100)
+    actor: str = Field(default="user", max_length=128)
+    payload: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-
+from geofront_api.events import reset_event_bus
 from geofront_api.jobs import reset_job_manager
 from geofront_api.main import create_app
 from geofront_api.state import reset_state
@@ -12,11 +12,13 @@ from geofront_api.state import reset_state
 def client() -> TestClient:
     reset_state()
     reset_job_manager()
+    reset_event_bus()
     app = create_app()
     with TestClient(app) as c:
         yield c
     reset_state()
     reset_job_manager()
+    reset_event_bus()
 
 
 @pytest.fixture()

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from fastapi import APIRouter
 from fastapi.concurrency import run_in_threadpool
 from geomemory import GeoMemory, GeoMemoryError, WorkspaceNotFoundError
@@ -7,6 +9,7 @@ from geomemory.core.exceptions import WorkspaceExistsError
 from geomemory.core.models import WorkspaceConfig
 
 from ..errors import GeoFrontError
+from ..events import get_event_bus
 from ..schemas import (
     CreateWorkspaceRequest,
     OpenWorkspaceRequest,
@@ -22,12 +25,11 @@ def _require_or_409() -> GeoMemory:
 
 
 def _settings_dict(ws: GeoMemory) -> dict[str, object]:
-    return ws.settings.model_dump(mode="json")
+    return cast(dict[str, object], ws.settings.model_dump(mode="json"))
 
 
-def _settings_response(settings: object) -> dict[str, object]:
-    assert hasattr(settings, "model_dump")
-    return settings.model_dump(mode="json")  # type: ignore[attr-defined]
+def _settings_response(settings: Any) -> dict[str, object]:
+    return cast(dict[str, object], settings.model_dump(mode="json"))
 
 
 @router.post("/create", status_code=201)
@@ -58,6 +60,9 @@ async def create_workspace(req: CreateWorkspaceRequest) -> dict[str, object]:
             ) from exc
         state.workspace = ws
         state.workspace_path = ws.path
+    get_event_bus().publish(
+        "workspace_changed", {"status": "open", "path": str(state.workspace_path)}
+    )
     return {"status": "open", "path": str(state.workspace_path), "settings": _settings_dict(ws)}
 
 
@@ -80,6 +85,9 @@ async def open_workspace(req: OpenWorkspaceRequest) -> dict[str, object]:
             ) from exc
         state.workspace = ws
         state.workspace_path = ws.path
+    get_event_bus().publish(
+        "workspace_changed", {"status": "open", "path": str(state.workspace_path)}
+    )
     return {"status": "open", "path": str(state.workspace_path), "settings": _settings_dict(ws)}
 
 
@@ -87,6 +95,7 @@ async def open_workspace(req: OpenWorkspaceRequest) -> dict[str, object]:
 async def close_workspace() -> dict[str, object]:
     state = get_state()
     await state.close()
+    get_event_bus().publish("workspace_changed", {"status": "closed", "path": None})
     return {"status": "closed"}
 
 

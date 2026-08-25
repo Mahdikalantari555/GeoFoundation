@@ -62,15 +62,46 @@ class JobManager:
                     self._tasks.pop(key, None)
             self._jobs[record.id] = record
 
+        from .events import get_event_bus
+
+        get_event_bus().publish(
+            "job_progress",
+            {"id": record.id, "type": record.type, "status": record.status, "progress": 0.0},
+        )
+
         async def _run() -> None:
             record.status = "running"
+            get_event_bus().publish(
+                "job_progress",
+                {"id": record.id, "type": record.type, "status": "running", "progress": 0.0},
+            )
             try:
                 record.result = await asyncio.to_thread(fn)
                 record.status = "completed"
                 record.progress = 1.0
+                get_event_bus().publish(
+                    "job_progress",
+                    {
+                        "id": record.id,
+                        "type": record.type,
+                        "status": "completed",
+                        "progress": 1.0,
+                        "result": record.result,
+                    },
+                )
             except Exception as exc:  # noqa: BLE001 — surfaced via job record
                 record.status = "failed"
                 record.error = str(exc)
+                get_event_bus().publish(
+                    "job_progress",
+                    {
+                        "id": record.id,
+                        "type": record.type,
+                        "status": "failed",
+                        "progress": record.progress,
+                        "error": record.error,
+                    },
+                )
 
         self._tasks[record.id] = asyncio.create_task(_run())
         return record

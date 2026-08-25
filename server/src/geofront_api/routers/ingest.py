@@ -69,6 +69,15 @@ def _make_ingest_job(
             payload["job_type"] = job.type
             if job.error is not None:
                 payload["error"] = job.error
+            asset_id = payload.get("asset_id")
+            if asset_id and not payload.get("skipped"):
+                # Thread context — EventBus.publish is thread-safe.
+                from ..events import get_event_bus
+
+                get_event_bus().publish(
+                    "asset_created",
+                    {"asset_id": asset_id, "collection_id": collection_id, "filename": filename},
+                )
             return payload
 
     return _run
