@@ -42,14 +42,17 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 
 ## M3 — Retrieval
 
-- [ ] Task: search + ask routes (all filters; abstention passthrough)
-  - Files: server/routers/{search,ask}.py, tests
-- [ ] Task: SSE /events stream
-  - Files: server/routers/events.py, test with streaming client
-- [ ] Task: Search page (modes, filter panel, bbox draw, score breakdown, hit feedback)
-  - Files: apps/web/src/features/search/**
-- [ ] Task: Ask page (chat UI, citations drawer, abstention card)
+- [x] Task: search + ask routes (all filters; abstention passthrough)
+  - Files: server/routers/{search,ask,feedback}.py, filters.py; tests (20 + 7 events)
+  - Note: POST /feedback added early — Search page hit thumbs need it in M3
+- [x] Task: SSE /events stream
+  - Files: server/events.py (EventBus), routers/events.py; jobs/ingest/collections/workspace publish
+  - Note: starlette TestClient + httpx.ASGITransport await app completion → tests use a manual ASGI harness
+- [x] Task: Search page (modes, filter panel, bbox draw, score breakdown, hit feedback)
+  - Files: apps/web/src/features/search/** (BBoxPicker = dependency-free SVG graticule draw)
+- [x] Task: Ask page (chat UI, citations drawer, abstention card)
   - Files: apps/web/src/features/ask/**
+- [x] Task: SSE cache invalidation on web (useEvents hook in AppShell)
 
 ## M4 — Ops
 
