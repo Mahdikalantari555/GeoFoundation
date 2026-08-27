@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
 from fastapi import APIRouter
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse
 from geomemory import GeoMemory, GeoMemoryError
 from geomemory.core.models import FeedbackEvent
 
@@ -30,3 +34,23 @@ async def record_feedback(req: FeedbackRequest) -> dict[str, object]:
         except GeoMemoryError as exc:
             raise GeoFrontError(code="feedback_failed", message=str(exc)) from exc
     return stored.model_dump(mode="json")
+
+
+@router.get("/export")
+async def export_feedback(task_type: str, output_dir: str | None = None) -> FileResponse:
+    """Export accepted feedback examples for a task type as a downloadable JSONL."""
+    ws = get_state().require_workspace()
+    out = Path(output_dir) if output_dir else Path(tempfile.mkdtemp())
+    out.mkdir(parents=True, exist_ok=True)
+    async with get_state().write_lock:
+        try:
+            path = await run_in_threadpool(ws.export_dataset, task_type, out)
+        except GeoMemoryError as exc:
+            raise GeoFrontError(code="feedback_export_failed", message=str(exc)) from exc
+        except ValueError as exc:
+            raise GeoFrontError(
+                code="feedback_export_empty",
+                message=str(exc),
+                status_code=404,
+            ) from exc
+    return FileResponse(path, filename=path.name, media_type="application/jsonl")

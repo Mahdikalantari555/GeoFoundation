@@ -143,6 +143,15 @@ class AskRequest(BaseModel):
     temporal: TemporalFilterRequest | None = None
 
 
+class RunEvalRequest(BaseModel):
+    """Request body for POST /eval/run."""
+
+    model_config = {"extra": "forbid"}
+
+    benchmark_path: str = Field(min_length=1, description="Path to a JSONL benchmark file")
+    config: str | None = Field(default=None, description="Optional benchmark config JSON path")
+
+
 class FeedbackRequest(BaseModel):
     """Immutable feedback event (answer rating, source relevance, …)."""
 

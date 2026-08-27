@@ -67,7 +67,7 @@ describe('AppShell', () => {
 describe('router', () => {
   it('renders placeholder pages without crashing', async () => {
     vi.mocked(api.health).mockResolvedValue(healthy)
-    const router = createMemoryRouter(routes, { initialEntries: ['/doctor'] })
+    const router = createMemoryRouter(routes, { initialEntries: ['/agent'] })
     render(
       <QueryClientProvider client={makeClient()}>
         <RouterProvider router={router} />
