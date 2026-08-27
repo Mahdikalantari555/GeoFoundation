@@ -26,7 +26,7 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 - [x] Task: Overview + Settings pages
   - Acceptance: stats cards render; settings form persists
   - Verify: pnpm build + manual smoke (en/fa)
-  - Files: apps/web/src/features/{overview,settings}/**
+  - Files: apps/web/src/features/workspace/** (OverviewPage, SettingsPage, WorkspaceSwitcher, hooks)
 
 ## M2 — Knowledge base
 
