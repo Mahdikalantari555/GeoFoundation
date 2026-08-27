@@ -1,6 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from './AppShell'
-import { PlaceholderPage } from '@/components/PlaceholderPage'
 import { OverviewPage } from '@/features/workspace/OverviewPage'
 import { SettingsPage } from '@/features/workspace/SettingsPage'
 import { DoctorPage } from '@/features/doctor/DoctorPage'
@@ -16,6 +15,8 @@ import { AgentChatPage } from '@/features/agent/AgentChatPage'
 import { ConversationsPage } from '@/features/agent/ConversationsPage'
 import { ToolsPage } from '@/features/agent/ToolsPage'
 import { PlaybooksPage } from '@/features/agent/PlaybooksPage'
+import { FarmsPage } from '@/features/farms/FarmsPage'
+import { MapsPage } from '@/features/maps/MapsPage'
 
 export const routes = [
   {
@@ -37,8 +38,8 @@ export const routes = [
       { path: 'conversations', element: <ConversationsPage /> },
       { path: 'tools', element: <ToolsPage /> },
       { path: 'playbooks', element: <PlaybooksPage /> },
-      { path: 'maps', element: <PlaceholderPage milestone="M6" /> },
-      { path: 'farms', element: <PlaceholderPage milestone="M6" /> },
+      { path: 'maps', element: <MapsPage /> },
+      { path: 'farms', element: <FarmsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

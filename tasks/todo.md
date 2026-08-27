@@ -73,9 +73,13 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 
 ## M6 — Geo
 
-- [ ] Task: maps/farms artifact endpoints (if not in M5)
-- [ ] Task: Maps viewer + Farms pages
-  - Files: apps/web/src/features/{maps,farms}/**
+- [x] Task: maps/farms artifact endpoints (if not in M5)
+  - Files: server/routers/agent/{farms,maps}.py; fixes: services/agent abstention backend, workspace init, agent route guards
+  - Verify: `conda run -n geospatial pytest server/tests -q` (72 passed)
+- [x] Task: Maps viewer + Farms pages
+  - Files: apps/web/src/api/geo.ts, apps/web/src/features/{maps,farms}/**, i18n en/fa, router
+  - Acceptance: Farms registry + stress report (trend table, worst date, sparkline, map thumb, gaps→abstention, recommend hits); Maps choropleth + GeoJSON overlay + zonal tables, layer list + opacity + legend
+  - Verify: `pnpm build` (517k gzip 154k) + `pnpm lint` (1 warning pre-existing)
 
 ## M7 — Polish
 
