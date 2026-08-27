@@ -22,15 +22,15 @@ Monorepo assembling:
 
 ## Environment & commands
 
-All Python runs in the **`ai` conda env**:
+All Python runs in the **`geospatial` conda env**:
 
 ```bash
-conda run -n ai pip install -e libs/geomemory -e libs/geoagent -e server
+conda run -n geospatial pip install -e libs/geomemory -e libs/geoagent -e server
 
 # server
-conda run -n ai pytest server/tests -q
-conda run -n ai ruff check server
-conda run -n ai mypy --strict server/src   # once code exists
+conda run -n geospatial pytest server/tests -q
+conda run -n geospatial ruff check server
+conda run -n geospatial mypy --strict server/src   # once code exists
 
 # web
 cd apps/web && pnpm install
@@ -38,7 +38,7 @@ pnpm gen:api   # regenerate client from running gateway (needs uvicorn up)
 pnpm lint && pnpm build && pnpm test
 
 # run dev stack
-conda run -n ai uvicorn geofront_api.main:app --port 8000
+conda run -n geospatial uvicorn geofront_api.main:app --port 8000
 cd apps/web && pnpm dev    # :5173 proxies /api → :8000
 ```
 

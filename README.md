@@ -19,11 +19,11 @@ docs/            CHARTER · ARCHITECTURE · STRUCTURE · SPEC_SERVER · SPEC_WEB
 ## Quickstart (dev)
 
 ```bash
-# python libs (conda env `ai`)
-conda run -n ai pip install -e libs/geomemory -e libs/geoagent -e server
+# python libs (conda env `geospatial`)
+conda run -n geospatial pip install -e libs/geomemory -e libs/geoagent -e server
 
 # gateway
-conda run -n ai uvicorn geofront_api.main:app --port 8000
+conda run -n geospatial uvicorn geofront_api.main:app --port 8000
 
 # web
 cd apps/web && pnpm install && pnpm dev   # :5173, proxies /api → :8000
