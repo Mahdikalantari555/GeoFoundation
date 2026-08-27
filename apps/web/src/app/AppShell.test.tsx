@@ -65,7 +65,7 @@ describe('AppShell', () => {
 })
 
 describe('router', () => {
-  it('renders placeholder pages without crashing', async () => {
+  it('renders Maps and Farms pages without crashing', async () => {
     vi.mocked(api.health).mockResolvedValue(healthy)
     const router = createMemoryRouter(routes, { initialEntries: ['/maps'] })
     render(
@@ -73,6 +73,8 @@ describe('router', () => {
         <RouterProvider router={router} />
       </QueryClientProvider>
     )
-    expect(await screen.findByText('Coming soon')).toBeInTheDocument()
+    expect(await screen.findByTestId('app-shell')).toBeInTheDocument()
+    // maps route renders without placeholder
+    expect(screen.getByText('Geo')).toBeInTheDocument()
   })
 })

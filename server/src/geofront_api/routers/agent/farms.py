@@ -364,8 +364,9 @@ async def create_farm_report(farm_id: str, body: FarmReportRequest) -> dict[str,
     if not service.is_initialized:
         raise GeoFrontError(code="agent_not_ready", message="Agent not initialized", status_code=409)
 
-    from geoagent.registry import RunContext
     import time
+
+    from geoagent.registry import RunContext
 
     def _run() -> dict[str, Any]:
         registry = service.registry
@@ -420,8 +421,9 @@ async def get_recommendation(
                 report_dir = str(p)
                 break
 
-    from geoagent.registry import RunContext
     import time
+
+    from geoagent.registry import RunContext
 
     registry = service.registry
     tool_def = registry.get("geo_recommend")

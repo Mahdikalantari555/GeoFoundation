@@ -11,7 +11,7 @@ import { ApiError } from '@/api/client'
 
 export function CollectionsPage() {
   const { t } = useTranslation()
-  const { data: collections } = useCollections()
+  const { data: collections, isLoading, error: loadError } = useCollections()
   const create = useCreateCollection()
   const archive = useArchiveCollection()
   const [showForm, setShowForm] = useState(false)
@@ -87,7 +87,13 @@ export function CollectionsPage() {
         </div>
       )}
 
-      {!collections || collections.length === 0 ? (
+      {isLoading ? (
+        <p className="py-10 text-center text-sm text-gf-muted" aria-live="polite">{t('common.loading')}</p>
+      ) : loadError ? (
+        <p className="rounded-md border border-gf-err/30 bg-gf-err/10 px-3 py-3 text-sm text-gf-err" role="alert">
+          {loadError instanceof Error ? loadError.message : String(loadError)}
+        </p>
+      ) : !collections || collections.length === 0 ? (
         <p className="py-10 text-center text-sm text-gf-muted">{t('collections.empty')}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -105,6 +111,7 @@ export function CollectionsPage() {
                 </div>
                 <button
                   type="button"
+                  aria-label={t('collections.archive')}
                   onClick={() => {
                     if (confirm(t('collections.archiveConfirm', { name: col.name }))) {
                       archive.mutate(col.id)
@@ -113,7 +120,7 @@ export function CollectionsPage() {
                   title={t('collections.archive')}
                   className="rounded-md border border-gf-border p-1.5 text-gf-muted transition-colors hover:border-gf-err hover:text-gf-err"
                 >
-                  <Archive className="size-4" />
+                  <Archive className="size-4" aria-hidden="true" />
                 </button>
               </div>
               <Link

@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "format": "prettier --write .",
     "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.d.ts"
   },
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "jsdom": "^30.0.1",
+    "@playwright/test": "^1.55.0",
     "openapi-typescript": "^7.13.0",
     "oxlint": "^1.75.0",
     "prettier": "^3.9.6",

@@ -1,0 +1,35 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - workspace_data:/workspace
+    environment:
+      # LLM key — set on host, forwarded into gateway only (never into web)
+      GEOMEMORY_LLM_API_KEY: ${GEOMEMORY_LLM_API_KEY:-}
+      GEOFOND_WORKSPACE: /workspace
+    # Single writer invariant: exactly one gateway container
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  web:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  workspace_data:

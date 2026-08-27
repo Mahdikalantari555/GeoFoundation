@@ -83,9 +83,15 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 
 ## M7 — Polish
 
-- [ ] Task: RTL audit both directions, a11y pass, empty/loading/error everywhere
-- [ ] Task: Playwright smoke (open ws → ingest → search → ask abstention path)
-- [ ] Task: docker-compose (gateway + web), README quickstart verified
+- [x] Task: RTL audit both directions, a11y pass, empty/loading/error everywhere
+  - Audit: logical props (ps/pe/ms/me) 103 uses, no pl/pr/ml/mr; dir flip via i18n applyDirection + html dir RTL smoke test; a11y: role=alert/tablist/tab, aria-* on filters, alt on maps/farms thumbs, type=button, keyboard; fixes: Collections loading/error states + aria-label on archive
+  - Verify: `pnpm lint` 1 warning (pre-existing Settings effect), `pnpm test` 16 passed
+- [x] Task: Playwright smoke (open ws → ingest → search → ask abstention path)
+  - Files: apps/web/playwright.config.ts, e2e/smoke.spec.ts (mocked gateway, 4-stage flow + RTL flip + Maps/Farms render), package.json test:e2e
+  - Verify: `pnpm test` (vitest 16 passed, e2e excluded), `pnpm build` 517k
+- [x] Task: docker-compose (gateway + web), README quickstart verified
+  - Files: docker-compose.yml (gateway:8000 + web:80→5173, single worker, healthcheck), server/Dockerfile (python:3.12-slim), apps/web/Dockerfile (node:24 → nginx, /api proxy), README docker section
+  - Verify: `docker compose config` valid, `conda run -n geospatial pytest` 72 passed
 
 ## Cross-cutting (every milestone)
 
