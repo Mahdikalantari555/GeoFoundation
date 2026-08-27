@@ -65,13 +65,15 @@ describe('RTL smoke', () => {
     await waitFor(() => {
       expect(document.documentElement.dir).toBe('rtl')
     })
-    expect(screen.getByText('نمای کلی')).toBeInTheDocument()
+    expect((await screen.findAllByText('نمای کلی')).length).toBeGreaterThan(0)
     setLanguage('en')
   })
 })
 
 describe('AppShell integration', () => {
   it('language toggle inside header flips UI text', async () => {
+    const { setLanguage } = await import('@/i18n')
+    setLanguage('en')
     const router = createMemoryRouter(routes, { initialEntries: ['/'] })
     renderWithProviders(router)
 

@@ -67,7 +67,12 @@ describe('AppShell', () => {
 describe('router', () => {
   it('renders placeholder pages without crashing', async () => {
     vi.mocked(api.health).mockResolvedValue(healthy)
-    renderApp()
+    const router = createMemoryRouter(routes, { initialEntries: ['/doctor'] })
+    render(
+      <QueryClientProvider client={makeClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    )
     expect(await screen.findByText('Coming soon')).toBeInTheDocument()
   })
 })
