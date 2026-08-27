@@ -12,6 +12,10 @@ import { IngestPage } from '@/features/knowledge/IngestPage'
 import { AssetsPage } from '@/features/knowledge/AssetsPage'
 import { SearchPage } from '@/features/search/SearchPage'
 import { AskPage } from '@/features/ask/AskPage'
+import { AgentChatPage } from '@/features/agent/AgentChatPage'
+import { ConversationsPage } from '@/features/agent/ConversationsPage'
+import { ToolsPage } from '@/features/agent/ToolsPage'
+import { PlaybooksPage } from '@/features/agent/PlaybooksPage'
 
 export const routes = [
   {
@@ -29,10 +33,10 @@ export const routes = [
       { path: 'index', element: <IndexPage /> },
       { path: 'feedback', element: <ReviewPage /> },
       { path: 'eval', element: <EvalPage /> },
-      { path: 'agent', element: <PlaceholderPage milestone="M5" /> },
-      { path: 'conversations', element: <PlaceholderPage milestone="M5" /> },
-      { path: 'tools', element: <PlaceholderPage milestone="M5" /> },
-      { path: 'playbooks', element: <PlaceholderPage milestone="M5" /> },
+      { path: 'agent', element: <AgentChatPage /> },
+      { path: 'conversations', element: <ConversationsPage /> },
+      { path: 'tools', element: <ToolsPage /> },
+      { path: 'playbooks', element: <PlaybooksPage /> },
       { path: 'maps', element: <PlaceholderPage milestone="M6" /> },
       { path: 'farms', element: <PlaceholderPage milestone="M6" /> },
       { path: '*', element: <Navigate to="/" replace /> },

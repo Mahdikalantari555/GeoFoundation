@@ -18,6 +18,13 @@ from .errors import (
 )
 from .events import get_event_bus
 from .health import router as health_router
+from .routers.agent.chat import router as agent_chat_router
+from .routers.agent.conversations import router as agent_conversations_router
+from .routers.agent.farms import router as agent_farms_router
+from .routers.agent.files import router as agent_files_router
+from .routers.agent.maps import router as agent_maps_router
+from .routers.agent.playbooks import router as agent_playbooks_router
+from .routers.agent.tools import router as agent_tools_router
 from .routers.ask import router as ask_router
 from .routers.collections import router as collections_router
 from .routers.doctor import router as doctor_router
@@ -45,10 +52,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     get_event_bus().bind(asyncio.get_running_loop())
     yield
     from .jobs import get_job_manager
+    from .services.agent import reset_agent_service
     from .state import get_state
 
     await get_job_manager().aclose()
     await get_state().close()
+    reset_agent_service()
 
 
 def create_app() -> FastAPI:
@@ -82,6 +91,13 @@ def create_app() -> FastAPI:
     app.include_router(eval_router, prefix=API_PREFIX)
     app.include_router(doctor_router, prefix=API_PREFIX)
     app.include_router(events_router, prefix=API_PREFIX)
+    app.include_router(agent_chat_router, prefix=API_PREFIX)
+    app.include_router(agent_conversations_router, prefix=API_PREFIX)
+    app.include_router(agent_tools_router, prefix=API_PREFIX)
+    app.include_router(agent_playbooks_router, prefix=API_PREFIX)
+    app.include_router(agent_files_router, prefix=API_PREFIX)
+    app.include_router(agent_farms_router, prefix=API_PREFIX)
+    app.include_router(agent_maps_router, prefix=API_PREFIX)
 
     app.add_exception_handler(GeoFrontError, geofront_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]

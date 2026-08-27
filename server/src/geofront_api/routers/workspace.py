@@ -15,6 +15,7 @@ from ..schemas import (
     OpenWorkspaceRequest,
     UpdateSettingsRequest,
 )
+from ..services.agent import get_agent_service, reset_agent_service
 from ..state import get_state
 
 router = APIRouter(prefix="/workspace", tags=["workspace"])
@@ -60,6 +61,7 @@ async def create_workspace(req: CreateWorkspaceRequest) -> dict[str, object]:
             ) from exc
         state.workspace = ws
         state.workspace_path = ws.path
+        get_agent_service().init(state.workspace_path)
     get_event_bus().publish(
         "workspace_changed", {"status": "open", "path": str(state.workspace_path)}
     )
@@ -85,6 +87,7 @@ async def open_workspace(req: OpenWorkspaceRequest) -> dict[str, object]:
             ) from exc
         state.workspace = ws
         state.workspace_path = ws.path
+        get_agent_service().init(state.workspace_path)
     get_event_bus().publish(
         "workspace_changed", {"status": "open", "path": str(state.workspace_path)}
     )
@@ -95,6 +98,7 @@ async def open_workspace(req: OpenWorkspaceRequest) -> dict[str, object]:
 async def close_workspace() -> dict[str, object]:
     state = get_state()
     await state.close()
+    reset_agent_service()
     get_event_bus().publish("workspace_changed", {"status": "closed", "path": None})
     return {"status": "closed"}
 

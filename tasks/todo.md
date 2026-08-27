@@ -56,19 +56,19 @@ Legend: [ ] pending · [x] done · each task ends with commit + verify.
 
 ## M4 — Ops
 
-- [ ] Task: index/feedback/eval/doctor routes (+ /doctor/llm probe, export download)
+- [x] Task: index/feedback/eval/doctor routes (+ /doctor/llm probe, export download)
   - Files: server/routers/{index,feedback,eval,doctor}.py, tests
-- [ ] Task: Index + Review + Eval + Doctor pages
+- [x] Task: Index + Review + Eval + Doctor pages
   - Files: apps/web/src/features/{index,feedback,eval,doctor}/**
 
 ## M5 — Agent
 
-- [ ] Task: geoagent end-to-end spike (python script: chat turn + one tool call)
+- [x] Task: geoagent end-to-end spike (python script: chat turn + one tool call)
   - Acceptance: go/no-go + scope note recorded here
   - Files: scripts/spike_geoagent.py
-- [ ] Task: agent routes (chat SSE, conversations, tools, playbooks, files sandbox, farms)
+- [x] Task: agent routes (chat SSE, conversations, tools, playbooks, files sandbox, farms)
   - Files: server/routers/agent/**, tests
-- [ ] Task: Agent Chat + Conversations + Tools + Playbooks pages
+- [x] Task: Agent Chat + Conversations + Tools + Playbooks pages
   - Files: apps/web/src/features/agent/**
 
 ## M6 — Geo
