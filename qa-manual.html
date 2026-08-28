@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GeoFoundation — Manual QA / Unit Test Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gf-bg: oklch(0.985 0.002 250);
+  --gf-panel: oklch(1 0 0);
+  --gf-border: oklch(0.92 0.005 250);
+  --gf-text: oklch(0.21 0.03 255);
+  --gf-muted: oklch(0.52 0.02 255);
+  --gf-accent: oklch(0.55 0.14 250);
+  --gf-accent-soft: oklch(0.95 0.03 250);
+  --gf-ok: oklch(0.62 0.15 150);
+  --gf-warn: oklch(0.72 0.15 75);
+  --gf-err: oklch(0.58 0.19 25);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --gf-bg: oklch(0.17 0.015 255);
+    --gf-panel: oklch(0.21 0.018 255);
+    --gf-border: oklch(0.28 0.02 255);
+    --gf-text: oklch(0.93 0.01 250);
+    --gf-muted: oklch(0.68 0.02 255);
+    --gf-accent: oklch(0.7 0.13 250);
+    --gf-accent-soft: oklch(0.26 0.04 255);
+    --gf-ok: oklch(0.72 0.14 150);
+    --gf-warn: oklch(0.78 0.13 75);
+    --gf-err: oklch(0.66 0.17 25);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation:none!important;transition:none!important} }
+body{
+  margin:0; background:var(--gf-bg); color:var(--gf-text);
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Vazirmatn', sans-serif;
+  line-height:1.6; font-variant-numeric: lining-nums;
+}
+code, .mono{ font-family: 'JetBrains Mono', ui-monospace, monospace; direction:ltr; unicode-bidi:isolate; font-size:.88em}
+a{color:var(--gf-accent); text-decoration:none}
+a:hover{text-decoration:underline}
+header.top{
+  position:sticky; top:0; z-index:40; backdrop-filter:blur(8px);
+  background:color-mix(in oklch, var(--gf-panel) 92%, transparent);
+  border-bottom:1px solid var(--gf-border);
+}
+.top-inner{max-width:1280px; margin:0 auto; padding:10px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.top h1{font-size:1.05rem; margin:0; font-weight:700}
+.badge{font-size:.7rem; border:1px solid var(--gf-border); border-radius:999px; padding:2px 8px; color:var(--gf-muted); background:var(--gf-panel)}
+.progress{height:6px; background:var(--gf-border); border-radius:999px; overflow:hidden; flex:1 1 200px; max-width:360px}
+.progress > div{height:100%; display:flex}
+.progress > div > span{height:100%; transition:width .2s}
+.p-ok{background:var(--gf-ok)} .p-fail{background:var(--gf-err)} .p-na{background:var(--gf-warn)} .p-rem{background:transparent}
+.toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.toolbar input, .toolbar select{border:1px solid var(--gf-border); border-radius:8px; padding:6px 10px; background:var(--gf-panel); color:var(--gf-text); font-size:.85rem}
+.toolbar button{border:1px solid var(--gf-border); background:var(--gf-panel); color:var(--gf-text); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:.82rem}
+.toolbar button.primary{background:var(--gf-accent); color:#fff; border-color:var(--gf-accent)}
+.layout{max-width:1280px; margin:0 auto; display:grid; grid-template-columns:220px 1fr; gap:18px; padding:18px 16px}
+@media (max-width: 900px){ .layout{grid-template-columns:1fr} .toc{position:static!important; max-height:none!important} .top{position:static} }
+.toc{position:sticky; top:78px; align-self:start; max-height:calc(100vh - 90px); overflow:auto; border:1px solid var(--gf-border); border-radius:12px; background:var(--gf-panel); padding:10px}
+.toc h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gf-muted); margin:0 0 8px}
+.toc a{display:block; padding:5px 8px; border-radius:8px; font-size:.82rem; color:var(--gf-text)}
+.toc a.active{background:var(--gf-accent-soft); color:var(--gf-accent); font-weight:600}
+.toc .cnt{float:inline-end; font-size:.7rem; color:var(--gf-muted); border:1px solid var(--gf-border); border-radius:999px; padding:0 6px; background:var(--gf-bg)}
+main{ min-width:0}
+section.card{border:1px solid var(--gf-border); background:var(--gf-panel); border-radius:14px; overflow:hidden; margin-bottom:16px}
+section.card > header{display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--gf-border); cursor:pointer; user-select:none}
+section.card > header h2{margin:0; font-size:.98rem; flex:1}
+.mini{height:4px; flex:1 1 120px; max-width:180px; background:var(--gf-border); border-radius:999px; overflow:hidden; display:flex}
+.mini > span{height:100%}
+.count{font-size:.75rem; color:var(--gf-muted); border:1px solid var(--gf-border); border-radius:999px; padding:2px 8px; background:var(--gf-bg)}
+.table{width:100%; border-collapse:collapse; font-size:.84rem}
+.table th, .table td{border-top:1px solid var(--gf-border); padding:8px 10px; text-align:start; vertical-align:top}
+.table th{font-size:.75rem; color:var(--gf-muted); text-transform:uppercase; letter-spacing:.04em; background:color-mix(in oklch, var(--gf-bg) 70%, var(--gf-panel))}
+.table tr.pass{ background: color-mix(in oklch, var(--gf-ok) 10%, var(--gf-panel))}
+.table tr.fail{ background: color-mix(in oklch, var(--gf-err) 10%, var(--gf-panel))}
+.table tr.na{ background: color-mix(in oklch, var(--gf-warn) 12%, var(--gf-panel))}
+.id{white-space:nowrap; font-weight:600}
+.actions{display:flex; gap:4px; flex-wrap:wrap}
+.actions button{width:32px; height:28px; border-radius:8px; border:1px solid var(--gf-border); background:var(--gf-panel); cursor:pointer; font-weight:700}
+.actions button.on-pass{background:var(--gf-ok); color:#fff; border-color:var(--gf-ok)}
+.actions button.on-fail{background:var(--gf-err); color:#fff; border-color:var(--gf-err)}
+.actions button.on-na{background:var(--gf-warn); color:#111; border-color:var(--gf-warn)}
+.note{font-size:.78rem; padding:6px 8px; border-radius:8px; margin-top:6px; border:1px solid}
+.note.info{ background: color-mix(in oklch, var(--gf-accent) 10%, var(--gf-panel)); border-color: color-mix(in oklch, var(--gf-accent) 30%, var(--gf-border)); color: var(--gf-text)}
+.note.warn{ background: color-mix(in oklch, var(--gf-warn) 14%, var(--gf-panel)); border-color: var(--gf-warn)}
+.note.danger{ background: color-mix(in oklch, var(--gf-err) 12%, var(--gf-panel)); border-color: var(--gf-err); color: color-mix(in oklch, var(--gf-err) 80%, black)}
+.kbd{border:1px solid var(--gf-border); border-bottom-width:2px; border-radius:6px; padding:1px 6px; background:var(--gf-bg); font-size:.78rem}
+.backtop{position:fixed; inset-inline-end:16px; inset-block-end:16px; width:42px; height:42px; border-radius:999px; border:1px solid var(--gf-border); background:var(--gf-panel); color:var(--gf-text); cursor:pointer; display:grid; place-items:center; box-shadow:0 4px 16px rgba(0,0,0,.12)}
+@media print{ header.top, .toc, .toolbar, .actions, .backtop{display:none!important} section.card{break-inside:avoid} section.card > header{cursor:default} .table{font-size:.72rem} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <h1>GeoFoundation — Manual QA / Unit Test Manual</h1>
+    <span class="badge">single-file • localStorage <span class="mono">gf-qa-manual-v1</span></span>
+    <div class="progress" aria-label="overall progress"><div><span class="p-ok" id="p-ok"></span><span class="p-fail" id="p-fail"></span><span class="p-na" id="p-na"></span><span class="p-rem" id="p-rem"></span></div></div>
+    <span class="badge" id="overallCounts">0 / 0</span>
+    <div class="toolbar">
+      <input id="search" placeholder="Search tests…" aria-label="Search"/>
+      <select id="filter" aria-label="Filter">
+        <option value="all">all</option>
+        <option value="not-done">not-done</option>
+        <option value="pass">pass</option>
+        <option value="fail">fail</option>
+        <option value="na">N/A</option>
+      </select>
+      <button id="expandBtn">expand all</button>
+      <button id="resetBtn" class="primary">reset all</button>
+    </div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <div id="toc"></div>
+  </nav>
+  <main id="main"></main>
+</div>
+<button class="backtop" id="backtop" aria-label="Back to top">↑</button>
+
+<script>
+// data model — single source, rendered via textContent (XSS-safe). Add a test = add one row.
+const QA_DATA = [
+  {
+    id: "0",
+    title: "0 — Environment setup (read this first)",
+    intro: "Settings to change before testing, required tools, storage/env, and full reset. For each setting: normal value → suggested test value + why.",
+    rows: [
+      { id: "0.1.1", action: "Set LLM env on gateway: GEOMEMORY_LLM_API_KEY (default, or custom via llm_api_key_env in PUT /workspace/settings). Normal: real key. Test: unset / empty string.", expectation: "GET /health and GET /workspace show llm.configured=false, llm.reachable=false without leaking key. No response contains the key string. POST /ask returns abstained=true with abstain_reason containing 'LLM unavailable'.", note: "Key is server-env only, never accepted from client, never returned (SPEC_SERVER). Removing it is the only way to test abstention deterministically.", kind: "info" },
+      { id: "0.1.2", action: "Shorten job poll interval for ingest/index tests. Normal: UI polls GET /api/v1/jobs/{id} every 500 ms until done. Test: keep as is; do not add wait in test itself.", expectation: "Job transitions queued→running→done (or failed) within 5 s for a 1 kB txt file. Progress goes 0 → 1. No extra request needed.", note: "Jobs run in threadpool via asyncio.to_thread; single worker.", kind: "info" },
+      { id: "0.2.1", action: "Browser: Chrome/Edge + DevTools network throttling. Terminal: conda env geospatial, pnpm 11. Required: curl, python 3.12.", expectation: "conda run -n geospatial uvicorn geofront_api.main:app --port 8000 serves /health 200. pnpm dev on :5173 proxies /api → :8000.", kind: "info" },
+      { id: "0.3.1", action: "Full reset (clean start). Run: rm -rf /tmp/gf-test-ws && mkdir -p /tmp/gf-test-ws && curl -X POST http://localhost:8000/api/v1/workspace/close ; delete localStorage key gf-qa-manual-v1 and gf.language; clear IndexedDB not used.", expectation: "GET /workspace returns status=closed. GET /api/v1/collections returns 409 workspace_not_open envelope. localStorage has no gf-qa-manual-v1. After reload, language falls back to navigator.language.", note: "Storage keys: gf.language (en|fa), gf-qa-manual-v1 (this doc), gf.workspace (TanStack Query cache, memory only). Env vars: GEOMEMORY_LLM_API_KEY, GEOFOND_WORKSPACE.", kind: "info" },
+      { id: "0.3.2", action: "Verify error envelope shape for any 4xx/5xx.", expectation: "Body is {error:{code:string,message:string,detail?:any}} with code=workspace_not_open|validation|not_found|http_error|internal_error and status 409|422|404|500. No stack trace leaks.", kind: "info" },
+      { id: "0.4.1", action: "Set prefers-reduced-motion: emulate in DevTools Rendering → Emulate CSS media feature prefers-reduced-motion: reduce. Reload.", expectation: "No smooth scroll, no SVG sparkline animation, no modal fade. All transitions are instant (CSS @media reduce disables).", kind: "info" },
+    ]
+  },
+  {
+    id: "1",
+    title: "1 — Health & gateway",
+    rows: [
+      { id: "1.1.1", action: "GET /health and GET /api/v1/health with no workspace open, no key.", expectation: "200 {status:'ok', workspace:'closed', llm:{provider:'api', configured:false, reachable:false}}." , note: "Health is the only route that works without workspace (SPEC_SERVER).", kind: "info" },
+      { id: "1.1.2", action: "GET /api/v1/unknown-route", expectation: "404 envelope code=http_error, not 200, not HTML. Web shows not-found UI, not crash.", kind: "info" },
+      { id: "1.2.1", action: "Offline: stop gateway (Ctrl+C), then navigate in web. Health pill + Search/Ask pages.", expectation: "Health pill shows 'Gateway offline' (red). Search shows 'Open a workspace to search' or fetch error, no unhandled rejection. Ask shows abstention or error card, page does not blank.", kind: "warn" },
+      { id: "1.3.1", action: "Rapid double fetch GET /health (double-click reload).", expectation: "Two requests, both 200, no 429. No request is dropped.", kind: "info" },
+      { id: "1.4.1", action: "Keyboard: Tab through header (WorkspaceSwitcher, HealthPill, LanguageToggle).", expectation: "All focusable elements have visible focus ring, Tab order is logical (ps→pe / start→end), Enter activates.", kind: "info" },
+    ]
+  },
+  {
+    id: "2",
+    title: "2 — Workspace lifecycle (server/src/geofront_api/routers/workspace.py, state.py)",
+    rows: [
+      { id: "2.1.1", action: "POST /api/v1/workspace/create {path:'/tmp/gf-test-ws/a', name:'A'} — fresh dir.", expectation: "201 {status:'open', path:'/tmp/gf-test-ws/a'}. GET /workspace returns same. Second create with same path returns 409.", kind: "info" },
+      { id: "2.1.2", action: "Input: POST /workspace/create with path='' (empty) or path='   ' (whitespace-only).", expectation: "422 validation, code=validation, detail contains path error. No workspace is created, no request to filesystem.", kind: "info" },
+      { id: "2.1.3", action: "Input: POST /workspace/create with name 200 chars (over limit? check schema) and path containing .. traversal '/tmp/../tmp/gf-test-ws/b'.", expectation: "If name too long → 422. Path traversal is normalized but stays under /tmp; workspace creation succeeds with resolved path. No path outside allowed root is created.", note: "Path is resolved on server; not a security boundary beyond sandbox but should not create /etc.", kind: "warn" },
+      { id: "2.2.1", action: "POST /workspace/open {path:'/tmp/gf-test-ws/a'} after close.", expectation: "200 {status:'open'}. GET /workspace/stats returns {asset_count, segment_count, storage_bytes} numbers, not null.", kind: "info" },
+      { id: "2.2.2", action: "POST /workspace/open with non-existent path '/tmp/nope-xyz'.", expectation: "404 envelope code=not_found or 409 workspace_not_open, not 500. No workspace becomes open.", kind: "info" },
+      { id: "2.3.1", action: "POST /workspace/close when open, then GET /workspace.", expectation: "200 {status:'closed'}. Second close is idempotent 200 closed, not 409. Subsequent GET /search returns 409 workspace_not_open.", kind: "info" },
+      { id: "2.3.2", action: "Concurrency: 2 tabs call POST /workspace/close at same time (or rapid double-click Close button).", expectation: "One succeeds 200, the other 200 closed (idempotent). No 500, no SQLite BUSY leak. Write lock serializes.", kind: "info" },
+      { id: "2.4.1", action: "PUT /workspace/settings {language:'fa'} then GET /workspace.", expectation: "200, settings.language='fa'. Web flips <html dir> to rtl, layout mirrors (ps/pe), no broken alignment. language='xx' → 422.", note: "Settings fields: name, language en|fa, offline, batch_size, model_path, embedding_path, vision_path, llm_provider api|llamacpp, llm_api_base_url, llm_model_id, llm_context_window, llm_api_key_env.", kind: "info" },
+      { id: "2.4.2", action: "PUT /workspace/settings {llm_api_key_env:'GEOMEMORY_LLM_API_KEY', llm_provider:'api', llm_api_base_url:'http://example.com'} and then GET /workspace.", expectation: "200, but GET /workspace never returns the key value, only llm.key_configured boolean. Key not in response body.", note: "Security: key stays in server env, never persisted to DB, never sent to client (SPEC_SERVER). Absence of key is the bug.", kind: "danger" },
+      { id: "2.4.3", action: "XSS: PUT /workspace/settings {name:'<img src=x onerror=alert(1)>'} then view Overview.", expectation: "Name is rendered as text, not HTML. No alert, no script execution. textContent used.", kind: "danger" },
+      { id: "2.5.1", action: "GET /workspace/stats with no workspace open.", expectation: "409 workspace_not_open, not 500. Web shows 'No workspace' card, not crash.", kind: "info" },
+    ]
+  },
+  {
+    id: "3",
+    title: "3 — Collections (server/routers/collections.py, jobs.py)",
+    rows: [
+      { id: "3.1.1", action: "POST /collections {name:'docs'} when workspace open.", expectation: "201 {id:string, name:'docs'}. GET /collections lists it. GET /collections/{id} returns same. Name is stored as provided (case preserved).", kind: "info" },
+      { id: "3.1.2", action: "Input: POST /collections {name:''} , {name:'   '} , {name: 'a'.repeat(256)} , {name:'<svg onload=alert(1)>'}", expectation: "'' and '   ' → 422 validation. 256 chars → 422 if limit, or 201 if allowed but not truncated. XSS payload stored as plain text, rendered via textContent, no execution. Paste of 10k chars → 422 or truncated, no 500.", kind: "danger" },
+      { id: "3.1.3", action: "POST /collections {name:'docs'} duplicate name (same case, then different case 'Docs').", expectation: "If duplicate allowed, 201 with different id; if not, 409 with code not_found? No 500. List shows both. No duplicate request is deduped by content hash (collections are not content-addressed).", note: "Collections are not deduped by SHA-256; only ingested files are.", kind: "info" },
+      { id: "3.2.1", action: "DELETE /collections/{id} then GET /collections/{id}.", expectation: "DELETE 200, second GET 404 envelope. List no longer contains id. Assets in collection stay in workspace (archive, not delete).", kind: "info" },
+      { id: "3.2.2", action: "DELETE /collections/invalid-uuid", expectation: "404 not_found, not 500. Error envelope.", kind: "info" },
+      { id: "3.3.1", action: "Offline: stop gateway, click 'New collection' → Create in web.", expectation: "Button shows error alert role, no success, no duplicate request. After gateway back, retry succeeds.", kind: "warn" },
+      { id: "3.4.1", action: "Rapid double-click Create with name='race' (not debounced).", expectation: "One request sent or two but server returns 201 + 409/201; UI does not create two collections with same id. Button disabled while isPending.", kind: "info" },
+      { id: "3.5.1", action: "Web: Collections page loading state (throttle network to Slow 3G, reload).", expectation: "Shows 'Loading…' (aria-live) before data, not empty. Empty state 'No collections yet' only after load.", kind: "info" },
+    ]
+  },
+  {
+    id: "4",
+    title: "4 — Ingest (server/routers/ingest.py — multipart + bytes, 202 job, SHA-256 dedup)",
+    rows: [
+      { id: "4.1.1", action: "POST /ingest multipart file=hello.txt (content 'hello world'), collection_id=valid, index_after=false.", expectation: "202 {job_id:string, status:'queued'}. GET /jobs/{job_id} → queued→running→done with result {asset_id, segment_count: >=1} or {skipped:false}. SSE emits job_progress and asset_created.", kind: "info" },
+      { id: "4.1.2", action: "POST /ingest/bytes JSON {filename:'hello.txt', content_base64:'aGVsbG8gd29ybGQ=', collection_id, index_after:true}.", expectation: "202, same lifecycle, no multipart needed. Same dedup behavior as multipart.", kind: "info" },
+      { id: "4.2.1", action: "Dedup: ingest same file bytes again (identical SHA-256) to same collection.", expectation: "Job result {skipped:true, asset_id:same} within 200 ms (no re-chunk). UI shows dedup banner 'Identical content (SHA-256 match) is already in the workspace.' No new asset count increment.", note: "Content identity = SHA-256 of raw bytes (ARCHITECTURE invariant). Second ingest must not create new revision.", kind: "info" },
+      { id: "4.2.2", action: "Dedup boundary: ingest file with one byte changed (add '\\n'), same name.", expectation: "Not deduped. New asset_id, segment_count may differ. Hash differs, so stored.", kind: "info" },
+      { id: "4.3.1", action: "Validation: POST /ingest without file, with empty file, with .docx (disabled), with .exe, with 100 MB tiff.", expectation: "No file → 422 validation. .docx → 422 or 400 with 'DOCX disabled' message. .exe → 422 unsupported. Oversize → 413 or 422, not 500.", kind: "info" },
+      { id: "4.3.2", action: "Accepted types: pdf, txt, md, csv, py, ipynb, tif/tiff (GeoTIFF), geojson, gpkg each 1 kB.", expectation: "All except docx return 202. GeoTIFF and GeoJSON produce scenes/layers in inspect (if rs extras installed). No 500.", kind: "info" },
+      { id: "4.4.1", action: "Offline: disconnect network after selecting file but before POST /ingest.", expectation: "Ingest shows 'Ingest failed' alert role, no job id, no polling. Retry succeeds when back.", kind: "warn" },
+      { id: "4.4.2", action: "Malformed server response: mock GET /jobs/{id} to return {status:'done'} without result, or invalid JSON.", expectation: "Web shows error, not crash. Polling stops, page does not reload. No unhandled promise.", kind: "warn" },
+      { id: "4.5.1", action: "Rapid double-click Ingest submit (or drop same file twice).", expectation: "One 202 job, second either dedup or second job but not two assets with same hash. No duplicate assets. Button disabled while pending.", kind: "info" },
+      { id: "4.5.2", action: "Concurrency: open ingest in two tabs, upload different files to same collection simultaneously.", expectation: "Both jobs run, both succeed, asset count +2. No SQLITE_BUSY 500 due to write lock + single worker.", kind: "info" },
+      { id: "4.6.1", action: "XSS: ingest file named '\x3Cscript>alert(1)\x3C/script>.txt' with content '<img src=x onerror=alert(1)>' then view Assets detail.", expectation: "Filename and text rendered via textContent/pre, no script execution. Locator chip shows file name as text.", kind: "danger" },
+      { id: "4.6.2", action: "Non-ASCII: ingest file with utf-8 name 'نامه_فارسی.txt' and content with emojis '🌾📄'.", expectation: "200/202, asset title preserved, no mojibake. UI shows name correctly in LTR code span inside RTL page.", kind: "info" },
+      { id: "4.7.1", action: "Web a11y: drag-drop area via keyboard (Tab to area, Space to open picker).", expectation: "Area has role=button, focus ring, Space/Enter opens file picker. Screen reader announces 'Drop a file here'.", kind: "info" },
+    ]
+  },
+  {
+    id: "5",
+    title: "5 — Assets (server/routers/ingest.py GET /assets, /assets/{id})",
+    rows: [
+      { id: "5.1.1", action: "GET /assets?collection_id=valid after ingesting 2 files.", expectation: "200 array length 2, each {id, title, kind (document|code|raster|vector|table), collection_id, created_at}. Filter by collection_id works.", kind: "info" },
+      { id: "5.1.2", action: "GET /assets with no workspace open, with invalid collection_id.", expectation: "No workspace → 409 workspace_not_open. Invalid collection → 200 empty array or 404, not 500.", kind: "info" },
+      { id: "5.2.1", action: "GET /assets/{id} for ingested txt file.", expectation: "200 {asset, revision:{hash,size_bytes,mime_type}, segments:[{locator,file,page?, text}], scenes[], layers[], observations[]}. hash is 64-char hex SHA-256.", kind: "info" },
+      { id: "5.2.2", action: "GET /assets/invalid-id and GET /assets/{id} with XSS id '\x3Cscript>'.", expectation: "404 envelope, not 500, not reflected XSS. No content is returned.", kind: "danger" },
+      { id: "5.3.1", action: "Web: Assets page filter by collection (select dropdown, data-testid asset-filter).", expectation: "Table filters client-side, URL ?collection= is updated. Reload preserves filter. No request storm.", kind: "info" },
+      { id: "5.3.2", action: "Web: click asset row → detail drawer (revision, segments, scenes, layers). Close with X or Esc or click outside.", expectation: "Drawer opens with data-testid asset-drawer, shows hash mono, segments text. Esc closes, focus returns to row. No scroll lock leak.", kind: "info" },
+      { id: "5.3.3", action: "Web: detail with GeoTIFF scenes — check bbox map preview and acquired_at, sensor, tiles.", expectation: "Scenes JSON shown in pre, bbox values are numbers, not NaN. Map thumb not broken.", kind: "info" },
+      { id: "5.4.1", action: "Offline: load Assets page when gateway down.", expectation: "Shows 'Something went wrong' alert, not blank. Retry button fetches again.", kind: "warn" },
+      { id: "5.4.2", action: "Rapid double-click asset row.", expectation: "One drawer, not two. No duplicate GET /assets/{id} storm (TanStack dedup).", kind: "info" },
+    ]
+  },
+  {
+    id: "6",
+    title: "6 — Search (server/routers/search.py, filters.py — sparse|dense|hybrid, all filters)",
+    rows: [
+      { id: "6.1.1", action: "POST /search {query:'NDVI threshold', mode:'hybrid', top_k:5} with workspace open and 1 doc ingested.", expectation: "200 {hits:[{id,score,sparse_score,dense_score,text,locator,metadata}], total:1, took_ms:number}. Score bar and sparse/dense breakdown visible.", kind: "info" },
+      { id: "6.1.2", action: "Validation: POST /search {query:''} and {query:'   '} and {query:'a'.repeat(5000)} and {mode:'invalid'} and {top_k:0} and {top_k:999}.", expectation: "'' / '   ' → 422 validation. Overlong → 422 or truncated but not 500. Invalid mode → 422. top_k 0 → 422, 999 → 422 or capped, not 500.", kind: "info" },
+      { id: "6.1.3", action: "Collection filter: POST /search {query:'test', collections:['col_1'], mode:'sparse'} with col_1 existing vs non-existing.", expectation: "Existing: hits filtered to col_1 only. Non-existing: 200 empty hits, not 404.", kind: "info" },
+      { id: "6.2.1", action: "Spatial: POST /search {query:'test', spatial:{op:'intersects', bbox:[50,30,51,31]}} then with invalid bbox [0,0,0,0] and with geometry_id.", expectation: "Valid bbox → 200 (maybe empty). Invalid bbox (minLon==maxLon) → 422 validation. geometry_id not found → 422 or 0 hits, not 500.", kind: "info" },
+      { id: "6.2.2", action: "Web: bbox draw — drag on mini-map SVG graticule (BBoxPicker) then Clear (click).", expectation: "Drag creates bbox overlay, inputs minLon/minLat/maxLon/maxLat update to 3 decimals. Clear removes bbox. Role=application, aria-label present. Works with mouse and touch.", kind: "info" },
+      { id: "6.2.3", action: "Temporal: POST /api/v1/search {temporal:{field:'acquired_at', from:'2023-01-01', to:'2023-12-31'}} and with from>to and with invalid field.", expectation: "Valid range → 200. from>to → 422 or 0 hits but not 500. Invalid field → 422.", kind: "info" },
+      { id: "6.2.4", action: "Sensor chips: {sensor:['Sentinel-2','Landsat-8']} and with sensor=['; DROP TABLE'] and sensor=['\x3Cscript>'].", expectation: "Valid → filtered hits. Injection strings → 0 hits, no SQL injection, no XSS, 200, not 500.", kind: "danger" },
+      { id: "6.3.1", action: "Top_k vs top_n: POST /search {top_k:2, top_n:10} and {top_k:10, top_n:2}.", expectation: "Response respects top_n (rerank) vs top_k (retrieve). 10,2 means at most 2 hits returned, not 10.", kind: "info" },
+      { id: "6.4.1", action: "Web: Search page modes tabs Sparse/Dense/Hybrid (role=tablist, aria-selected).", expectation: "Tab click updates mode, query re-runs, URL not polluted. Keyboard ArrowLeft/Right moves focus, Enter selects.", kind: "info" },
+      { id: "6.4.2", action: "Web: per-hit thumbs up/down → POST /feedback, then toggle.", expectation: "Click Relevant → border-gf-ok, second click disabled while pending, no duplicate POST. After success, button stays selected.", kind: "info" },
+      { id: "6.4.3", action: "Offline: run search when gateway down.", expectation: "Shows 'Gateway offline' or search-error alert, not crash. Retry succeeds when back.", kind: "warn" },
+      { id: "6.5.1", action: "Concurrency: fire two searches in quick succession (type, hit Enter twice).", expectation: "Second search cancels or dedups first; UI shows latest results only, no interleaved hits. No request leak.", kind: "info" },
+      { id: "6.5.2", action: "XSS: search query '<img src=x onerror=alert(1)>' and query with 1000 non-ASCII chars 'فارسی🌾'.", expectation: "Query sent as JSON, hits text escaped via textContent, no alert. Non-ASCII preserved in request and hits.", kind: "danger" },
+      { id: "6.6.1", action: "Responsive: width 360 px, open filter panel.", expectation: "Filters stack vertically, bbox picker remains usable, no horizontal scroll, sticky header not covering content.", kind: "info" },
+    ]
+  },
+  {
+    id: "7",
+    title: "7 — Ask (server/routers/ask.py — grounded_qa|research|code, citations, abstention)",
+    rows: [
+      { id: "7.1.1", action: "POST /ask {question:'What is NDVI threshold?', mode:'grounded_qa'} with context and LLM key configured.", expectation: "200 {answer:string, citations:[{locator,segment_id,claim_span}], abstained:false}. Citations have locator.file and segment_id.", kind: "info" },
+      { id: "7.1.2", action: "POST /ask {question:''} and {question:'   '} and {question:'a'.repeat(4000)} and {mode:'invalid'}.", expectation: "'' / '   ' → 422. 4000 chars → 422 or truncated but not 500. Invalid mode → 422.", kind: "info" },
+      { id: "7.2.1", action: "Abstention: POST /ask with no LLM key (unset GEOMEMORY_LLM_API_KEY) or with empty context (fresh workspace, no ingest).", expectation: "200 with abstained:true and abstain_reason containing 'LLM unavailable' or 'No context'. No 503 stack trace. Web shows abstention card with reason and 'Configure in Workspace settings' hint, not crash.", note: "LLM-unavailable = first-class UI state (SPEC_WEB).", kind: "info" },
+      { id: "7.2.2", action: "Web: Ask page citation chips [S#] → source drawer (segment + locator). Click chip.", expectation: "Drawer opens with text and locator.file:page, copyable. Multiple chips work, no duplicate fetch.", kind: "info" },
+      { id: "7.3.1", action: "Web: Ask filters — select collections and temporal field, then send.", expectation: "Request payload includes filters.collections and filters.temporal. Response respects them.", kind: "info" },
+      { id: "7.3.2", action: "Rapid double-click Send.", expectation: "One request sent, button disabled while pending, no duplicate answers. No page reload.", kind: "info" },
+      { id: "7.3.3", action: "Offline: send Ask when gateway down.", expectation: "Shows 'Gateway offline' error, not crash. Abstention card not shown; error card shown.", kind: "warn" },
+      { id: "7.4.1", action: "XSS: ask question '\x3Cscript>alert(1)\x3C/script>' and question with markdown '**bold** [link](javascript:alert(1))'.", expectation: "Question and answer rendered as text, no script execution. Citations escaped.", kind: "danger" },
+      { id: "7.5.1", action: "Keyboard: Tab to mode select, ArrowDown, Enter, Tab to input, Enter to send.", expectation: "All reachable via keyboard, focus ring visible, no trap.", kind: "info" },
+    ]
+  },
+  {
+    id: "8",
+    title: "8 — Feedback / Review (server/routers/feedback.py)",
+    rows: [
+      { id: "8.1.1", action: "POST /api/v1/feedback {target_type:'segment', target_id:'seg_1', label:'relevant', actor:'user'} after search hit.", expectation: "201. GET /api/v1/feedback/review-queue (undefined — needs decision: route not in code) returns queue with item. POST /api/v1/feedback/review/{id} (undefined — needs decision), reviewer_id:'alice'} → 200.", kind: "info" },
+      { id: "8.1.2", action: "Input: POST /feedback with invalid target_type or empty segment_id or direction='maybe'.", expectation: "422 validation, not 500.", kind: "info" },
+      { id: "8.2.1", action: "GET /api/v1/feedback/export?task_type=retrieval when queue has 1 accepted item.", expectation: "200 JSONL file download, Content-Disposition attachment, lines are valid JSON with hit data. Task_type invalid → 422.", kind: "info" },
+      { id: "8.2.2", action: "GET /api/v1/feedback/export?task_type=retrieval when empty", expectation: "404 or 200 empty file, not 500.", kind: "info" },
+      { id: "8.3.1", action: "Web: ReviewPage queue cards — Accept/Reject with reviewer id, then Export panel → download.", expectation: "Cards show accept/reject buttons, click disables while pending, queue updates via SSE. Export button triggers download.", kind: "info" },
+      { id: "8.4.1", action: "Concurrency: two tabs accept same example_id simultaneously.", expectation: "One 200, the other 409 or 200 idempotent, no double count. No 500.", kind: "info" },
+    ]
+  },
+  {
+    id: "9",
+    title: "9 — Index (server/routers/index.py — text.nomic.v1, text.hash.v1, vision)",
+    rows: [
+      { id: "9.1.1", action: "POST /index/build {space_id:'text.hash.v1'} (offline) when workspace open.", expectation: "202 {job_id}. GET /jobs/{id} → done with manifest. Space vision flagged experimental but not blocked.", kind: "info" },
+      { id: "9.1.2", action: "POST /index/rebuild {space_id:'text.nomic.v1'} and {space_id:'invalid'}.", expectation: "Valid → 202 job. Invalid → 422 validation, not 500.", kind: "info" },
+      { id: "9.2.1", action: "POST /images/search (experimental) with no vision index.", expectation: "200 empty or 501 not implemented, not 500. Web shows experimental badge.", kind: "info" },
+      { id: "9.3.1", action: "Web: Index page space selector toggle, Build button, progress bar.", expectation: "Build shows progress 0→1, manifest status updates, vision space flagged experimental amber.", kind: "info" },
+      { id: "9.4.1", action: "Offline: click Build when gateway down.", expectation: "Error alert, not crash. Retry works.", kind: "warn" },
+    ]
+  },
+  {
+    id: "10",
+    title: "10 — Eval / Benchmark (server/routers/eval.py)",
+    rows: [
+      { id: "10.1.1", action: "POST /eval/benchmark multipart benchmark.jsonl (3 lines: {query, expected_ids}) + config {top_k:5}.", expectation: "202 job. GET /jobs/{id} → done with metrics {precision@k, recall@k, MRR, latency}. Metrics are numbers, not NaN.", kind: "info" },
+      { id: "10.1.2", action: "Validation: upload empty jsonl, malformed jsonl (missing expected_ids), invalid config top_k=-1.", expectation: "422 validation, not 500. Error envelope.", kind: "info" },
+      { id: "10.2.1", action: "Web: Eval page upload → Run → metrics table + Recharts.", expectation: "Table and charts render, not blank. Charts have aria-labels, not infinite loop.", kind: "info" },
+    ]
+  },
+  {
+    id: "11",
+    title: "11 — Doctor (server/routers/doctor.py — environment, workspace, roundtrip, LLM probe)",
+    rows: [
+      { id: "11.1.1", action: "GET /api/v1/doctor", expectation: "200 {core:[{name,installed,version}], optional:[...]} with badges green/red, no 500 even if deps missing.", kind: "info" },
+      { id: "11.1.2", action: "GET /api/v1/doctor (includes environment + workspace)/tmp/gf-test-ws/a and ?path=/tmp/nope", expectation: "Existing → 200 {exists:true, structural:true}. Non-existing → 200 {exists:false} or 404, not 500.", kind: "info" },
+      { id: "11.1.3", action: "GET /api/v1/doctor (open check)/tmp/gf-test-ws/a", expectation: "200 roundtrip success, not 500. Fail path → 500 internal_error but not leaked stack.", kind: "info" },
+      { id: "11.2.1", action: "GET /api/v1/doctor/llm with key configured vs missing.", expectation: "200 {provider:'api', key_configured:true/false, base_url, reachable:boolean}. Never contains key value. Missing key shows 'LLM key missing' badge.", note: "Security: key never crosses wire (SPEC_SERVER).", kind: "danger" },
+      { id: "11.3.1", action: "Web: Doctor page tables + LLM probe button.", expectation: "Tables show badges, probe button shows reachable false when offline, not crash.", kind: "info" },
+    ]
+  },
+  {
+    id: "12",
+    title: "12 — Jobs & SSE (server/jobs.py, routers/jobs.py, routers/events.py, events.py)",
+    rows: [
+      { id: "12.1.1", action: "POST /ingest → 202, GET /jobs/{id} poll, GET /api/v1/events SSE stream.", expectation: "Jobs poll returns {id,type,status:queued|running|done|error,progress:0..1,result?,error?}. SSE emits job_progress, asset_created, collection_created, workspace_changed with named events. No polling staleness after SSE.", kind: "info" },
+      { id: "12.1.2", action: "GET /jobs/invalid-id", expectation: "404 envelope, not 500.", kind: "info" },
+      { id: "12.2.1", action: "Concurrency: submit 3 ingests at once to same collection.", expectation: "3 job_ids distinct, all eventually done, no 500, no lost job. Job registry caps at 256, oldest terminal evicted.", kind: "info" },
+      { id: "12.2.2", action: "Offline: disconnect SSE (close tab) then ingest completes in other tab.", expectation: "SSE stream closed cleanly, no server error. Other tab still gets job done via poll. Reconnect re-subscribes.", kind: "info" },
+      { id: "12.3.1", action: "Web: useEvents hook in AppShell — after ingest completes, Overview stats and Collections list auto-refresh without reload.", expectation: "TanStack Query invalidation on asset_created/collection_created/job_progress. No manual reload needed.", kind: "info" },
+      { id: "12.3.2", action: "Malformed SSE: mock EventBus publish with invalid JSON or missing event name.", expectation: "Client ignores or shows error, not crash. No unhandled exception.", kind: "warn" },
+    ]
+  },
+  {
+    id: "13",
+    title: "13 — Auth failure modes (authoritative per AGENTS.md § Invariants)",
+    rows: [
+      { id: "13.1.1", action: "Guard: call any workspace-dependent route (search, ask, collections, ingest) with no workspace open.", expectation: "409 envelope code=workspace_not_open, message 'No workspace is open...'. Not 401/404/500. Web shows 'Open a workspace' card, not login.", note: "There is no auth; closed workspace = 409 is the only guard. Do not file as missing auth.", kind: "info" },
+      { id: "13.2.1", action: "Offline vs invalid: set llm_provider='api' with unreachable base_url http://127.0.0.1:9 and with malformed base_url 'ht!tp://'.", expectation: "Unreachable → 503 backend_unavailable or abstention with reason, not 500. Malformed → 422 validation. Two are distinct (reachable vs invalid).", note: "Distinction offline vs invalid is deliberate; they must have different messages.", kind: "info" },
+      { id: "13.3.1", action: "Fallback: set llm_provider='llamacpp' with model_path missing vs correct offline:true.", expectation: "Missing model → abstention with 'model not found' reason, not crash. offline:true blocks api backend, forces llamacpp path.", kind: "info" },
+    ]
+  },
+  {
+    id: "14",
+    title: "14 — Agent: Chat SSE (server/routers/agent/chat.py, services/agent.py)",
+    rows: [
+      { id: "14.1.1", action: "POST /api/v1/agent/chat {message:'hello hello hello... 1 char', conversation_id:null} with workspace open, no key (abstain backend).", expectation: "200 text/event-stream with events conversation, thinking, message (text contains 'LLM unavailable'), done. No 409 if workspace open.", kind: "info" },
+      { id: "14.1.2", action: "POST /agent/chat without workspace open.", expectation: "409 workspace_not_open, not 200 stream. Web shows 'Agent not initialized' card.", kind: "info" },
+      { id: "14.1.3", action: "Validation: message='' (empty), message='   ', message 4001 chars (one over 4000), missing message field.", expectation: "'' / '   ' → 422 validation. 4001 → 422. Missing → 422. No request is forwarded to LLM.", kind: "info" },
+      { id: "14.2.1", action: "Tool timeline: send message that triggers geo_search tool (e.g. 'search for NDVI'). Check SSE tool_start/tool_end events.", expectation: "Stream emits tool_start {tool:'geo_search'} then tool_end {tool:'geo_search', status:'ok'}. Timeline shows duration and cache-hit badge if from_cache=1.", kind: "info" },
+      { id: "14.2.2", action: "Rapid double-click Send in AgentChatPage.", expectation: "One stream, second click disabled while pending, no duplicate conversation_id. No request storm.", kind: "info" },
+      { id: "14.2.3", action: "Offline: disconnect during SSE (kill gateway mid-stream).", expectation: "Stream ends with error event, not hang. UI shows guardrail error card, not blank. AbortController aborts.", kind: "warn" },
+      { id: "14.3.1", action: "Keyboard: Tab to input, type, Enter to send, Tab to tool-run collapse.", expectation: "Enter sends, focus stays in input, tool timeline expandable via keyboard, no trap.", kind: "info" },
+      { id: "14.3.2", action: "XSS: chat message '<img src=x onerror=alert(1)>'", expectation: "Message rendered as text, no alert. Assistant answer textContent escaped.", kind: "danger" },
+      { id: "14.4.1", action: "Concurrency: 2 tabs chat same conversation_id simultaneously.", expectation: "Both streams succeed, tool calls serialized per workspace lock, no 500. Order is per-request.", kind: "info" },
+    ]
+  },
+  {
+    id: "15",
+    title: "15 — Agent: Conversations (routers/agent/conversations.py)",
+    rows: [
+      { id: "15.1.1", action: "GET /agent/conversations when workspace open, no conversations yet.", expectation: "200 {conversations:[]}. After chat, list length 1 with {id, title, created_at}.", kind: "info" },
+      { id: "15.1.2", action: "GET /agent/conversations/nonexistent", expectation: "404 conversation_not_found envelope, not 500.", kind: "info" },
+      { id: "15.2.1", action: "GET /agent/conversations/{id} after chat with tool calls.", expectation: "200 {conversation, turns:[{role:'user'|'assistant', content}], tool_runs:[{tool, args_json, status, latency_ms, from_cache}]}. Turns in order.", kind: "info" },
+      { id: "15.3.1", action: "Without workspace: GET /agent/conversations.", expectation: "409 workspace_not_open.", kind: "info" },
+    ]
+  },
+  {
+    id: "16",
+    title: "16 — Agent: Tools (routers/agent/tools.py, registry.py — geo_search, geo_ingest, gis, advisor)",
+    rows: [
+      { id: "16.1.1", action: "GET /agent/tools when workspace open.", expectation: "200 {tools:[{name,description,params,returns,timeout_s,cacheable}]} includes geo_search, geo_ingest, geo_compute_indices, geo_reclassify, geo_polygonize, geo_zonal_stats, geo_symbology, geo_farm_report, geo_recommend. Length >0.", kind: "info" },
+      { id: "16.1.2", action: "POST /agent/tools/geo_search/call {args:{query:'NDVI', top_k:5}}", expectation: "200 {status:'ok', value:{hits:[...]}, artifacts:[]}. Query empty → 422 validation.", kind: "info" },
+      { id: "16.1.3", action: "POST /agent/tools/invalid_tool/call", expectation: "404 tool_not_found envelope, not 500.", kind: "info" },
+      { id: "16.1.4", action: "POST /agent/tools/geo_compute_indices/call with missing input_tif or band_map invalid.", expectation: "Validation error status validation_error, not 500. Message contains 'band' or 'required'.", kind: "info" },
+      { id: "16.2.1", action: "Direct tool call bypassing LLM: POST /agent/tools/geo_search/call with args that would be XSS.", expectation: "Query '\x3Cscript>' returns 0 hits, not 500, not stored. No execution.", kind: "danger" },
+      { id: "16.3.1", action: "Web: ToolsPage renders manifest cards with timeout_s and cacheable badge.", expectation: "Cards show name, description text, not truncated HTML. Loading spinner before data, error alert if 409.", kind: "info" },
+      { id: "16.4.1", action: "Offline: GET /agent/tools when gateway down.", expectation: "Error alert, not blank. Retry succeeds.", kind: "warn" },
+    ]
+  },
+  {
+    id: "17",
+    title: "17 — Agent: Playbooks (routers/agent/playbooks.py)",
+    rows: [
+      { id: "17.1.1", action: "GET /agent/playbooks when workspace open, no playbooks yet.", expectation: "200 {playbooks:[]}. After adding file playbooks/farm-stress-map.md, GET includes {name:'farm-stress-map', valid:true}.", kind: "info" },
+      { id: "17.1.2", action: "GET /agent/playbooks/nonexistent", expectation: "404 playbook_not_found.", kind: "info" },
+      { id: "17.2.1", action: "POST /agent/playbooks/save {name:'test', content:'---\\nname: test\\n...'} with invalid content (missing steps).", expectation: "422 invalid_playbook with detail problems array, not 500.", kind: "info" },
+      { id: "17.2.2", action: "POST /agent/playbooks/save with XSS content '\x3Cscript>' in description.", expectation: "Stored as text, rendered via textContent, no execution. Valid if schema passes, otherwise 422.", kind: "danger" },
+      { id: "17.3.1", action: "POST /agent/playbooks/test/run {params:{}} when playbook valid.", expectation: "200 {status:'ok', value:...} or SSE progress? Current is sync JSON result, not 202.", kind: "info" },
+      { id: "17.4.1", action: "Without workspace: GET /agent/playbooks.", expectation: "409 workspace_not_open.", kind: "info" },
+    ]
+  },
+  {
+    id: "18",
+    title: "18 — Agent: Files sandbox (routers/agent/files.py — runs/ only, no ..)",
+    rows: [
+      { id: "18.1.1", action: "GET /agent/files/list?pattern=runs/**/* when workspace open, no files.", expectation: "200 {files:[], pattern:'runs/**/*'}. After farm report, list contains report.md, stats.csv, map.png.", kind: "info" },
+      { id: "18.1.2", action: "GET /agent/files/list without workspace.", expectation: "409 workspace_not_open, not 500.", kind: "info" },
+      { id: "18.2.1", action: "GET /agent/files/download?path=runs/reports/slug/report.md after report exists.", expectation: "200 FileResponse with correct mime, content is report.md text. Missing file → 404 file_not_found.", kind: "info" },
+      { id: "18.2.2", action: "Traversal: GET /agent/files/download?path=../server/src/geofront_api/main.py and ?path=/etc/passwd and ?path=runs/../../etc/passwd.", expectation: "403 path_outside_sandbox envelope, not 200. No file is served. This is security boundary.", note: "Sandbox root = active workspace runs/; path-normalized, no .. (SPEC_SERVER). Harmless traversal must fail.", kind: "danger" },
+      { id: "18.2.3", action: "GET /agent/files/preview?path=runs/reports/slug/report.md", expectation: "200 text/plain, first 50000 chars, not binary. Traversal same 403.", kind: "info" },
+      { id: "18.3.1", action: "Web: Agent files not directly exposed, but Maps/Farms use download URLs. Click map.png thumb.", expectation: "Img src is /api/v1/agent/files/download?path=... with encodeURIComponent, not raw full_path injection. 404 shows broken image hidden, not crash.", kind: "info" },
+    ]
+  },
+  {
+    id: "19",
+    title: "19 — Farms (server/routers/agent/farms.py — registry from GeoJSON farm_id)",
+    rows: [
+      { id: "19.1.1", action: "GET /agent/farms when workspace open, no farms.geojson.", expectation: "200 {farms:[], count:0, source:null, reports:[]}. Web shows 'No farms registry found' empty state, not 404.", kind: "info" },
+      { id: "19.1.2", action: "Ingest farms.geojson FeatureCollection with 2 features (farm_id F1,F2, crop, geometry Polygon) into workspace, then GET /agent/farms.", expectation: "200 farms length 2, each {farm_id, properties, bbox:[w,s,e,n] numbers, has_report:false}. Source is path to .geojson.", kind: "info" },
+      { id: "19.1.3", action: "Validation: farms.geojson with no farm_id, with duplicate farm_id, with invalid geometry (self-intersecting), with 100 features.", expectation: "No farm_id → farms [] (filtered). Duplicate → both? No 500. Invalid geometry → bbox null or skipped, not 500. 100 features → count 100, not truncated to 10.", kind: "info" },
+      { id: "19.2.1", action: "GET /agent/farms/F1 when exists, and /farms/NotExist.", expectation: "F1 → 200 {farm:{farm_id:'F1', properties, geometry, bbox}, report:null}. NotExist → 404 farm_not_found.", kind: "info" },
+      { id: "19.2.2", action: "After running geo_farm_report for F1 (requires rasters/*.tif with dates in name YYYY-MM-DD), GET /agent/farms/F1/report.", expectation: "200 {farm_id:'F1', dir, report_md:string, stats:[{date, mean_ndvi, stress_class, stress_label}], map_png:string|null, trend:{first,last,worst_date,worst_label,count}, files:[]}. Stats length equals dated rasters.", note: "Rasters must have date in stem per DATE_RE (20\\d{2})[-_]?(\\d{2})[-_]?(\\d{2}). No dates → validation_error 'no dates found'.", kind: "info" },
+      { id: "19.2.3", action: "GET /agent/farms/F1/report when no report exists.", expectation: "404 report_not_found, not 500. Web shows 'No stress report yet' amber card with hint to run geo_farm_report.", kind: "info" },
+      { id: "19.3.1", action: "POST /agent/farms/F1/report {farms_path:'farms.geojson', raster_glob:'rasters/*.tif', indices:['NDVI']} when workspace open.", expectation: "202 {job_id, status:'queued'}. GET /jobs/{id} → done with result containing report_md, stats_csv, map_png. No 500 even if no rasters matched → validation_error 'no raster files matched'.", kind: "info" },
+      { id: "19.3.2", action: "POST /agent/farms/NotExist/report", expectation: "404 farm_not_found.", kind: "info" },
+      { id: "19.4.1", action: "GET /agent/farms/F1/recommend?topic=irrigation after report exists, and with topic=invalid.", expectation: "Valid → 200 {status:'ok', value:{topic:'irrigation', farm_id:'F1', stress_state:{mean,stress_label}, hits:[{text,locator}], gaps:[]}}. Invalid topic → 422 validation (enum). Gaps non-empty → abstention triggers must be shown.", note: "geo_recommend returns gaps as abstention triggers; UI must render amber 'Abstention — data gaps' card when gaps.length>0.", kind: "info" },
+      { id: "19.4.2", action: "GET /agent/farms/F1/recommend without report_dir nor ndvi_mean (force gaps).", expectation: "200 with gaps containing 'provide report_dir or ndvi_mean' and 'no expert rules found' if no agronomy sources ingested. Web renders gaps list.", kind: "info" },
+      { id: "19.5.1", action: "Web: FarmsPage registry table — click row F1, check trend, worst date, sparkline SVG, map thumb, report.md details, topic tabs.", expectation: "Table highlights selected row bg-gf-accent-soft/60, detail shows Sparkline <svg role=img>, worst_date badge, map thumb img with alt='farm stress map', report.md pre with 6000 chars, topic tabs switch hits.", kind: "info" },
+      { id: "19.5.2", action: "Offline: GET /agent/farms when gateway down.", expectation: "Web shows error alert, not blank. Retry works.", kind: "warn" },
+      { id: "19.5.3", action: "XSS: farms.geojson feature properties farm_id='\x3Cscript>alert(1)\x3C/script>'", expectation: "farm_id rendered as text in table, no script execution.", kind: "danger" },
+    ]
+  },
+  {
+    id: "20",
+    title: "20 — Maps (server/routers/agent/maps.py — runs/**/*, choropleths, GeoJSON, zonal)",
+    rows: [
+      { id: "20.1.1", action: "GET /agent/maps?pattern=runs/**/* when no artifacts.", expectation: "200 {artifacts:[], layers:[], count:0, pattern, legend:null}. Web shows 'No map artifacts yet' empty state.", kind: "info" },
+      { id: "20.1.2", action: "After farm report, GET /agent/maps.", expectation: "200 count>=1, artifacts include map.png (kind image), .geojson (vector), zonal_*.csv (table). Layers have {id,path,full_path,name,kind,label,size,dir,ext}. Legend may have [{class,count}] if GeoJSON has class counts.", kind: "info" },
+      { id: "20.2.1", action: "GET /agent/maps/geojson?path=runs/reports/F1/latest_classes.geojson and with invalid path '../etc/passwd'.", expectation: "Valid → 200 {path, feature_count, properties:[], geojson:{type:'FeatureCollection', features:[]}}. Invalid → 403 or 404, not 500, not leaked.", note: "GeoJSON preview truncates to 300 features if >300 with _truncated flag.", kind: "danger" },
+      { id: "20.2.2", action: "GET /agent/maps/zonal?path=runs/reports/F1/zonal_2023-01-01.csv and with missing file.", expectation: "Valid → 200 {path, rows:[{farm_id, mean, min, max,...}], count, fields:[]}. Missing → 404 file_not_found.", kind: "info" },
+      { id: "20.2.3", action: "Validation: GET /agent/maps with pattern='../../*'", expectation: "200 but traversal sanitized: only files under workspace roots are listed, no outside files. No 500.", kind: "danger" },
+      { id: "20.3.1", action: "Web: MapsPage layer list — filter by 'zonal', adjust opacity slider 20→100, click map.png, click GeoJSON, click zonal CSV.", expectation: "Filter narrows layers. Opacity slider updates img style opacity 0.2→1.0. Image preview shows map.png. GeoJSON shows SVG overlay of polygons (80 max) and Raw JSON details. Zonal shows table with sticky header.", kind: "info" },
+      { id: "20.3.2", action: "Web: choropleth map.png card shows legend and hide/show overlay button.", expectation: "Button toggles Eye/EyeOff icon, overlay opacity changes, not crash if map.png missing (onError hides img).", kind: "info" },
+      { id: "20.4.1", action: "Without workspace: GET /agent/maps.", expectation: "409 workspace_not_open.", kind: "info" },
+    ]
+  },
+  {
+    id: "21",
+    title: "21 — Lib: geomemory (libs/geomemory — SQLite WAL+FTS5+RTree, SHA-256, provenance)",
+    rows: [
+      { id: "21.1.1", action: "Ingest pipeline: call GeoMemory.ingest('/tmp/a.txt', collection_id) with text file 10 kB, check segment count and hash.", expectation: "Returns {asset_id, segment_count: >=1, hash:64-hex}. Second ingest same bytes → {skipped:true, asset_id same} without new segments. No duplicate objects/<sha256> file.", note: "Invariants: content identity SHA-256, revisions immutable, provenance answer→citation→segment→revision→objects/<sha256> (AGENTS.md §5).", kind: "info" },
+      { id: "21.1.2", action: "Loaders: ingest doc.pdf, code.py, data.csv, geo.tif (if rasterio installed), points.geojson, table.gpkg each via pipeline.", expectation: "All return asset_id, kind document|code|table|raster|vector as per loader. DOCX → error 'DOCX disabled' (known gap). No 500 for unsupported.", kind: "info" },
+      { id: "21.2.1", action: "Embeddings: spaces isolated — ingest text and vision, then list indices. Check text.nomic.v1 vs text.hash.v1 vs vision.", expectation: "Spaces do not mix; search in text.nomic.v1 does not return vision hits. Offline mode uses text.hash.v1 (n-gram hashing fallback). No cross-modal leakage.", kind: "info" },
+      { id: "21.2.2", action: "Storage: check SQLite WAL mode and FTS5, RTree tables exist via doctor_workspace.", expectation: "Doctor workspace structural check returns true. WAL file exists when open. Concurrent readers allowed, writers serialized.", kind: "info" },
+      { id: "21.3.1", action: "Retrieval: search with RRF fusion (sparse+dense) and filters apply_hit_filters spatial→temporal→sensor.", expectation: "Hits have score,sparse_score,dense_score,locator{file,page}. No duplicate hits after dedup. Sensor hit uses hit_sensor.", note: "Single canonical path: rrf_fuse + apply_hit_filters + hit_sensor (AGENTS.md).", kind: "info" },
+      { id: "21.3.2", action: "Feedback: record_feedback, get_review_queue, review_example, export JSONL.", expectation: "Review queue shows pending items, export creates JSONL with task_type retrieval. No data loss on concurrent review.", kind: "info" },
+      { id: "21.4.1", action: "QA: ask with no model vs with context — check abstention.", expectation: "No model → abstained true, abstain_reason non-empty. With context but no LLM key → abstained true. Not 503 stack.", kind: "info" },
+      { id: "21.5.1", action: "Object store: verify objects/<sha256> file exists after ingest, content equals original bytes.", expectation: "SHA-256 of file content matches object filename. Provenance chain traversable: citation locator → segment → asset_revision hash → objects/<sha256>.", kind: "info" },
+      { id: "21.6.1", action: "Concurrency: two processes ingest different files to same workspace dir simultaneously (single writer invariant).", expectation: "One succeeds, the other gets SQLITE_BUSY retry or 409, not corruption. Gateway enforces single worker, single active workspace lock.", note: "Never run two writer processes against one workspace (ARCHITECTURE).", kind: "danger" },
+    ]
+  },
+  {
+    id: "22",
+    title: "22 — Lib: geoagent (libs/geoagent — Registry, tools, Playbooks, Budgets, Citations)",
+    rows: [
+      { id: "22.1.1", action: "Registry: register tool with name 'geo_search', check openai_tools() schema and manifest_lines().", expectation: "openai_tools returns array with function.name and parameters JSON schema. Duplicate register throws or overwrites, not silent.", kind: "info" },
+      { id: "22.1.2", action: "gis_tools: geo_compute_indices {input_tif:'rasters/a.tif', indices:['NDVI'], band_map:{red:4,nir:8}} with valid multiband GeoTIFF.", expectation: "Returns {indices:{NDVI:{stats:{min,max,mean}, tif:string}}} and artifact. Invalid band → validation_error. Missing rasterio → RuntimeError 'install geoagent[rs]'.", kind: "info" },
+      { id: "22.1.3", action: "gis_tools: geo_reclassify {input_tif:index_tif, rules:[{min:-1,max:0.4,out:2},{min:0.4,max:0.6,out:1},{min:0.6,max:1,out:0}]} then geo_polygonize then geo_zonal_stats then geo_symbology.", expectation: "Each returns histogram, feature_count, rows, png path. Overlapping rules → validation_error. No 500 on nodata.", kind: "info" },
+      { id: "22.2.1", action: "advisor_tools: geo_farm_report {farm_id:'F1', farms_path:'farms.geojson', raster_glob:'rasters/*.tif'} with 2 dated rasters.", expectation: "Returns {report_md, stats_csv, map_png, dates:[2], trend:{worst_date}, sources:[S#], warnings:[]} and artifacts. No dates in name → validation_error. No rasters → validation_error.", note: "Orchestrates indices→reclassify→zonal→polygonize→symbology, all audited and cached.", kind: "info" },
+      { id: "22.2.2", action: "advisor_tools: geo_recommend {topic:'irrigation', farm_id:'F1', report_dir:'runs/reports/F1'} without agronomy sources.", expectation: "Returns {hits:[], gaps:['no expert rules found']}. Gaps non-empty → UI abstention. Topic invalid → 422.", kind: "info" },
+      { id: "22.3.1", action: "AgentCore: chat with budgets max_tool_calls=8, max_wall_seconds=120, max_iterations=6. Send message that would need 10 tool calls.", expectation: "Stops at max_tool_calls=8 or max_iterations=6 with fallback message 'Turn budget exhausted...' . No infinite loop.", kind: "info" },
+      { id: "22.3.2", action: "Citation grounding: call geo_search to get hits, then check that answer cites only [S1]..[Sn] mapped to hits, invalid keys stripped.", expectation: "Response content has [S1]..[Sn] where S1 maps to first hit text. Invalid keys like [S99] are stripped with '[n invalid citation key(s) stripped]' note.", note: "Cite every domain claim with [S#] mapped to hits; never cite keys not given (SYSTEM_PROMPT).", kind: "info" },
+      { id: "22.4.1", action: "Playbooks: parse markdown playbook 'farm-stress-map' and validate against registry.", expectation: "parse_playbook returns {name, version, triggers, params, steps}. validate returns [] when valid, else problems array with messages. Save creates file under agent workspace.", kind: "info" },
+      { id: "22.5.1", action: "Store: Store('/tmp/test.db') create_conversation, add_turn, list_conversations, tool_run audit.", expectation: "Conversations persisted, tool_run table has from_cache flag, latency_ms. No 500 on concurrent writes (SQLite WAL).", kind: "info" },
+    ]
+  },
+  {
+    id: "23",
+    title: "23 — Web shell: AppShell, Sidebar, HealthPill, LanguageToggle, i18n RTL, a11y",
+    rows: [
+      { id: "23.1.1", action: "Load web at :5173 with gateway up, workspace closed.", expectation: "AppShell shows Sidebar groups Workspace/Knowledge/Agent/Geo, header with WorkspaceSwitcher, HealthPill 'Gateway online' green, 'No workspace' gray, LanguageToggle EN|FA, not blank.", kind: "info" },
+      { id: "23.1.2", action: "Toggle language EN → FA.", expectation: "<html lang='fa' dir='rtl'>, layout mirrors (ps/pe logical props), Sidebar on inline-start, no broken alignment. Toggle FA → EN restores ltr. LocalStorage gf.language='fa' persisted.", kind: "info" },
+      { id: "23.1.3", action: "HealthPill when LLM key missing vs configured.", expectation: "Missing → 'LLM key missing' amber. Configured → 'LLM configured' green. No key value shown.", kind: "info" },
+      { id: "23.2.1", action: "Keyboard: Tab through Sidebar nav links, Enter on Collections.", expectation: "Focus ring visible, Tab order logical, Enter navigates, no trap. Sidebar links have size-4 icons with aria-hidden.", kind: "info" },
+      { id: "23.2.2", action: "Responsive: viewport 360 px (mobile), open Sidebar, header.", expectation: "Layout stacks: Sidebar collapses or scrolls, header gap-4 wraps, no horizontal scroll. Main p-6 remains scrollable.", kind: "info" },
+      { id: "23.2.3", action: "Prefers-reduced-motion: enable reduce, reload, interact (open drawer).", expectation: "No animated transitions on drawer, no smooth scroll, progress bars instant.", kind: "info" },
+      { id: "23.3.1", action: "SSE: useEvents hook while viewing Overview, trigger ingest in other tab.", expectation: "Overview stats auto-update via SSE invalidation (asset_created→assets,stats), not polling. No duplicate fetch.", kind: "info" },
+      { id: "23.3.2", action: "Empty/loading/error: throttle network Slow 3G, load each page.", expectation: "Each page shows Loading… (aria-live) before data, Empty state centered with icon when no data, Error alert role when fetch fails, not blank.", kind: "info" },
+      { id: "23.4.1", action: "Security: navigate to /farms with farms.geojson containing farm_id='\x3Cscript>alert(1)\x3C/script>'.", expectation: "Farm id rendered as text, no alert. All dynamic data via textContent, not innerHTML.", kind: "danger" },
+    ]
+  },
+  {
+    id: "24",
+    title: "24 — End-to-end flows (mock gateway via Playwright route interception; real flow needs live gateway)",
+    rows: [
+      { id: "24.1.1", action: "Flow: Open workspace /tmp/gf-e2e → Create collection 'e2e-docs' → Ingest hello.txt → Poll job done → List assets → Inspect asset → Check provenance hash.", expectation: "Each step 200/201/202→done, no 409 after open. Asset count +1, inspect shows revision.hash 64-hex and segments text 'hello world'. Hash equals SHA-256 of file bytes.", kind: "info" },
+      { id: "24.1.2", action: "Flow: Search hybrid 'hello' → expect hit with sparse_score+dense_score, then Ask 'What is in hello?' → expect answer with citation [S1].", expectation: "Search hits 1, Ask answer non-empty or abstained false with citations length 1, locator file 'hello.txt'. No 500.", kind: "info" },
+      { id: "24.1.3", action: "Flow: Search → click thumbs up → Review queue → Accept → Export JSONL → verify file lines.", expectation: "Feedback 201, review queue 1 item, export 200 JSONL with task_type retrieval, not empty.", kind: "info" },
+      { id: "24.2.1", action: "Flow: Farm geo — ingest farms.geojson (F1) → place 2 dated rasters rasters/2023-01-01.tif and 2023-01-15.tif (valid) → call geo_farm_report for F1 → check report.md, stats.csv, map.png → recommend irrigation.", expectation: "Report has 2 dates, worst_date is lower NDVI, map.png exists, sources [S#] from knowledge base, recommend hits or gaps shown. No 500.", kind: "info" },
+      { id: "24.2.2", action: "Flow: Maps geo — after farm report, open Maps page, verify layers list contains map.png and latest_classes.geojson, click GeoJSON overlay, click zonal CSV table.", expectation: "Layers count >=2, legend shows class counts, overlay SVG renders polygons, zonal table shows rows with farm_id and mean. No crash on 500 features (truncated at 300).", kind: "info" },
+      { id: "24.3.1", action: "Flow: Ask abstention — close LLM key (unset GEOMEMORY_LLM_API_KEY), ask any question.", expectation: "Ask returns abstained:true, abstain_reason contains 'LLM unavailable' or 'No API key', card shows 'No answer provided' and 'Configure in Workspace settings', not crash.", kind: "info" },
+      { id: "24.3.2", action: "Flow: Offline — stop gateway mid-ingest, then Search, then Ask.", expectation: "Ingest shows 'Ingest failed' alert, Search shows 'Gateway offline', Ask shows error card, not blank. After restart, retry succeeds without reload.", kind: "warn" },
+      { id: "24.4.1", action: "Flow: Playwright smoke (apps/web/e2e/smoke.spec.ts) with mocked /api/v1: workspace create → collection → ingest → search → ask abstention + RTL flip + Maps/Farms render.", expectation: "Test passes in chromium, 1 retry max, trace on failure. All steps mocked via page.route, no live gateway needed. Covers open ws→ingest→search→ask.", note: "Mock mirrors real envelope shapes (health, workspace, jobs, search hits, ask abstained).", kind: "info" },
+      { id: "24.5.1", action: "Docker: docker compose config validates, then docker compose up --build -d (gateway healthcheck, web depends_on healthy), curl /health 200, open http://localhost:5173.", expectation: "Gateway single worker on 8000, web nginx on 80→5173 proxies /api to gateway:8000, SPA fallback to /index.html. Logs no 500. workspace_data volume persists.", note: "Single writer invariant: exactly one gateway container (AGENTS.md).", kind: "info" },
+    ]
+  },
+  {
+    id: "S1",
+    title: "Summary: an error MUST appear (absence is the bug)",
+    intro: "If any of these do not show an error, file a bug. These are guard/fallback distinctions that break silently.",
+    rows: [
+      { id: "S1.1", action: "Search without workspace", expectation: "409 workspace_not_open" },
+      { id: "S1.2", action: "Ask without workspace", expectation: "409 workspace_not_open" },
+      { id: "S1.3", action: "Collections without workspace", expectation: "409 workspace_not_open" },
+      { id: "S1.4", action: "Ingest without workspace", expectation: "409 workspace_not_open" },
+      { id: "S1.5", action: "Assets without workspace", expectation: "409 workspace_not_open" },
+      { id: "S1.6", action: "Agent chat/tools/playbooks/files without workspace", expectation: "409 workspace_not_open / agent_not_ready" },
+      { id: "S1.7", action: "Farms/Maps without workspace", expectation: "409 workspace_not_open" },
+      { id: "S1.8", action: "Search with empty query / whitespace-only", expectation: "422 validation" },
+      { id: "S1.9", action: "Ask with empty question", expectation: "422 validation" },
+      { id: "S1.10", action: "Ingest .docx (disabled)", expectation: "422 unsupported / DOCX disabled" },
+      { id: "S1.11", action: "Files download with .. traversal", expectation: "403 path_outside_sandbox (security)" },
+      { id: "S1.12", action: "Unknown collection / asset / conversation / tool / playbook / farm id", expectation: "404 not_found / tool_not_found / farm_not_found / report_not_found" },
+      { id: "S1.13", action: "Invalid mode / sensor / temporal field / farm topic", expectation: "422 validation" },
+      { id: "S1.14", action: "LLM key missing — ask must abstain", expectation: "200 abstained:true (not 500, not empty answer)" },
+      { id: "S1.15", action: "XSS payload in workspace name / collection name / farms.geojson farm_id", expectation: "Rendered as text, no script execution (textContent) — if alert appears, it is a security bug" },
+    ]
+  },
+  {
+    id: "S2",
+    title: "Summary: no error MAY appear (any error is the bug)",
+    intro: "If any error, logout, or blank appears here, file a bug. These are happy paths that must not show errors.",
+    rows: [
+      { id: "S2.1", action: "Health with no workspace", expectation: "200 ok, not 409/500" },
+      { id: "S2.2", action: "Workspace create → open → close → stats (when open)", expectation: "201/200/200, no 500, idempotent close" },
+      { id: "S2.3", action: "Collection create with valid name", expectation: "201, not 422/500" },
+      { id: "S2.4", action: "Ingest valid txt/pdf/geojson/tif with dedup second time", expectation: "202 → done, second is {skipped:true}, not error" },
+      { id: "S2.5", action: "Search hybrid with valid filters, non-ASCII query", expectation: "200 hits (maybe 0), not 500" },
+      { id: "S2.6", action: "Ask with LLM configured and context", expectation: "200 answer with citations, not abstained, not 500" },
+      { id: "S2.7", action: "Feedback record → export (review-queue not implemented; see 8.x)", expectation: "201/200/200 download, not 404" },
+      { id: "S2.8", action: "Index build/rebuild, Doctor all probes, Jobs poll, SSE stream", expectation: "200/202→done, not 500" },
+      { id: "S2.9", action: "Agent tools list + valid direct call (geo_search)", expectation: "200, not 404" },
+      { id: "S2.10", action: "Files list/download/preview of existing artifact", expectation: "200, not 403/404" },
+      { id: "S2.11", action: "Farms/Maps when artifacts exist", expectation: "200 with data, sparkline/map thumb/legend, not empty error" },
+      { id: "S2.12", action: "Language toggle en↔fa", expectation: "No error, no crash, dir flips, no layout break" },
+      { id: "S2.13", action: "Rapid double-click and two-tab concurrency on ingest/search/close", expectation: "No 500, no duplicate side effect, writes serialized" },
+      { id: "S2.14", action: "Offline then back online — retry", expectation: "Error shown while offline, retry succeeds without reload" },
+      { id: "S2.15", action: "Responsive 360px and prefers-reduced-motion", expectation: "No error, no horizontal scroll, no animation" },
+    ]
+  }
+];
+
+</script>
+
+<script>
+// render — all via textContent / escaping, single source QA_DATA
+const LS_KEY = "gf-qa-manual-v1";
+const $ = sel => document.querySelector(sel);
+const main = $("#main");
+const toc = $("#toc");
+const searchEl = $("#search");
+const filterEl = $("#filter");
+const expandBtn = $("#expandBtn");
+const resetBtn = $("#resetBtn");
+const pOk = $("#p-ok"), pFail=$("#p-fail"), pNa=$("#p-na"), pRem=$("#p-rem");
+const overallCounts = $("#overallCounts");
+const backtop = $("#backtop");
+
+let state = load();
+function load(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch{ return {} }
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); updateProgress(); }
+function getStatus(id){ return state[id] || "" }
+
+function el(tag, cls, text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+
+function render(){
+  main.innerHTML="";
+  toc.innerHTML="";
+  const q=(searchEl.value||"").toLowerCase();
+  const f=filterEl.value;
+  QA_DATA.forEach(sec=>{
+    const secWrap = el("section","card");
+    secWrap.id = "sec-"+sec.id;
+    const header = el("header");
+    const h2 = el("h2",null, sec.title);
+    const cnt = el("span","count");
+    const mini = el("div","mini");
+    const sOk=el("span"), sFail=el("span"), sNa=el("span"), sRem=el("span");
+    sOk.className="p-ok"; sFail.className="p-fail"; sNa.className="p-na"; sRem.className="p-rem";
+    mini.append(sOk,sFail,sNa,sRem);
+    header.append(h2, mini, cnt);
+    header.addEventListener("click", ()=>{ secWrap.classList.toggle("collapsed"); body.style.display = secWrap.classList.contains("collapsed") ? "none" : ""; updateExpandBtn(); });
+    secWrap.append(header);
+    if(sec.intro){
+      const intro = el("div",null, sec.intro);
+      intro.style.cssText="padding:10px 14px; font-size:.84rem; color:var(--gf-muted); border-bottom:1px solid var(--gf-border)";
+      secWrap.append(intro);
+    }
+    const body = el("div");
+    const table = el("table","table");
+    const thead = el("thead");
+    const hr = el("tr");
+    ["ID","Action / Input","Expectation",""].forEach(t=>{ const th=el("th",null,t); hr.append(th); });
+    thead.append(hr); table.append(thead);
+    const tbody = el("tbody");
+    let visible=0, done=0, pass=0, fail=0, na=0;
+    sec.rows.forEach(row=>{
+      const txt = (row.action+" "+row.expectation+" "+(row.note||"")).toLowerCase();
+      const st = getStatus(row.id);
+      const matchSearch = !q || txt.includes(q) || row.id.toLowerCase().includes(q);
+      const matchFilter = f==="all" || (f==="not-done" && !st) || f===st;
+      if(!matchSearch || !matchFilter) return;
+      visible++;
+      if(st) done++;
+      if(st==="pass") pass++; else if(st==="fail") fail++; else if(st==="na") na++;
+      const tr = el("tr");
+      if(st) tr.classList.add(st);
+      const tdId = el("td","id mono", row.id);
+      const tdAct = el("td");
+      const actDiv = el("div",null, row.action);
+      tdAct.append(actDiv);
+      if(row.note){
+        const n = el("div", "note "+(row.kind||"info"), row.note);
+        if(row.kind==="danger") n.prepend(el("span",null,"⚠ Security: "));
+        tdAct.append(n);
+      }
+      const tdExp = el("td",null, row.expectation);
+      const tdCtrl = el("td");
+      const acts = el("div","actions");
+      const bP = el("button", st==="pass"?"on-pass":"", "✓");
+      const bF = el("button", st==="fail"?"on-fail":"", "✕");
+      const bN = el("button", st==="na"?"on-na":"", "–");
+      bP.title="pass"; bF.title="fail"; bN.title="N/A";
+      bP.setAttribute("aria-label","pass "+row.id); bF.setAttribute("aria-label","fail "+row.id); bN.setAttribute("aria-label","N/A "+row.id);
+      bP.addEventListener("click", ()=>{ state[row.id]= state[row.id]==="pass" ? "" : "pass"; if(!state[row.id]) delete state[row.id]; save(); render(); });
+      bF.addEventListener("click", ()=>{ state[row.id]= state[row.id]==="fail" ? "" : "fail"; if(!state[row.id]) delete state[row.id]; save(); render(); });
+      bN.addEventListener("click", ()=>{ state[row.id]= state[row.id]==="na" ? "" : "na"; if(!state[row.id]) delete state[row.id]; save(); render(); });
+      acts.append(bP,bF,bN); tdCtrl.append(acts);
+      tr.append(tdId, tdAct, tdExp, tdCtrl);
+      tbody.append(tr);
+    });
+    // update mini + cnt
+    const total = sec.rows.length;
+    const totalDone = sec.rows.filter(r=>getStatus(r.id)).length;
+    const totalPass = sec.rows.filter(r=>getStatus(r.id)==="pass").length;
+    const totalFail = sec.rows.filter(r=>getStatus(r.id)==="fail").length;
+    const totalNa = sec.rows.filter(r=>getStatus(r.id)==="na").length;
+    const rem = total - totalDone;
+    sOk.style.width = (total? totalPass/total*100:0)+"%";
+    sFail.style.width = (total? totalFail/total*100:0)+"%";
+    sNa.style.width = (total? totalNa/total*100:0)+"%";
+    sRem.style.width = (total? rem/total*100:0)+"%";
+    cnt.textContent = visible===total ? (totalDone+"/"+total) : (visible+" / "+total+" (filtered)");
+    table.append(tbody);
+    body.append(table);
+    secWrap.append(body);
+    // hide empty filtered sections
+    if(visible===0){ secWrap.style.display="none"; } else { secWrap.style.display=""; }
+    main.append(secWrap);
+    // toc
+    const a = el("a",null, sec.title);
+    a.href = "#sec-"+sec.id;
+    const c = el("span","cnt", totalDone+"/"+total);
+    a.append(c);
+    toc.append(a);
+  });
+  updateProgress();
+  highlightToc();
+}
+
+function updateProgress(){
+  const all = QA_DATA.reduce((s,sec)=>s+sec.rows.length,0);
+  const done = QA_DATA.reduce((s,sec)=>s+sec.rows.filter(r=>getStatus(r.id)).length,0);
+  const pass = QA_DATA.reduce((s,sec)=>s+sec.rows.filter(r=>getStatus(r.id)==="pass").length,0);
+  const fail = QA_DATA.reduce((s,sec)=>s+sec.rows.filter(r=>getStatus(r.id)==="fail").length,0);
+  const na = QA_DATA.reduce((s,sec)=>s+sec.rows.filter(r=>getStatus(r.id)==="na").length,0);
+  const rem = all - done;
+  pOk.style.width = (all? pass/all*100:0)+"%";
+  pFail.style.width = (all? fail/all*100:0)+"%";
+  pNa.style.width = (all? na/all*100:0)+"%";
+  pRem.style.width = (all? rem/all*100:0)+"%";
+  overallCounts.textContent = pass+"✓ "+fail+"✕ "+na+"– "+rem+" left — "+all+" total";
+  document.title = "QA "+pass+"✓ "+fail+"✕ — GeoFoundation";
+}
+
+function updateExpandBtn(){
+  const anyCollapsed = document.querySelector("section.card.collapsed");
+  expandBtn.textContent = anyCollapsed ? "expand all" : "collapse all";
+}
+expandBtn.addEventListener("click", ()=>{
+  const anyCollapsed = document.querySelector("section.card.collapsed");
+  document.querySelectorAll("section.card").forEach(sec=>{
+    const body = sec.querySelector("div:last-child");
+    if(anyCollapsed){ sec.classList.remove("collapsed"); if(body) body.style.display=""; }
+    else { sec.classList.add("collapsed"); if(body) body.style.display="none"; }
+  });
+  updateExpandBtn();
+});
+searchEl.addEventListener("input", render);
+filterEl.addEventListener("change", render);
+resetBtn.addEventListener("click", ()=>{
+  if(confirm("Reset all pass/fail/N/A states?")){
+    state={}; save(); render();
+  }
+});
+window.addEventListener("scroll", highlightToc, {passive:true});
+function highlightToc(){
+  const links = [...toc.querySelectorAll("a")];
+  let active=null;
+  for(const sec of QA_DATA){
+    const el=document.getElementById("sec-"+sec.id);
+    if(!el) continue;
+    const r=el.getBoundingClientRect();
+    if(r.top < 120) active=sec.id;
+  }
+  links.forEach(a=>{ a.classList.toggle("active", a.getAttribute("href")==="#sec-"+active); });
+}
+backtop.addEventListener("click", ()=> window.scrollTo({top:0, behavior: "smooth"}));
+backtop.style.display = window.scrollY>400 ? "grid" : "none";
+window.addEventListener("scroll", ()=>{ backtop.style.display = window.scrollY>400 ? "grid" : "none"; }, {passive:true});
+
+render();
+</script>
+</body>
+</html>
