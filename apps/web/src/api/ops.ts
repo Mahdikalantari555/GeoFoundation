@@ -7,10 +7,12 @@ export interface DoctorReport {
 }
 
 export interface LLMReport {
-  provider: string
+  provider: string | null
   key_env: string
-  key_configured: boolean
-  base_url: string | null
+  key_configured?: boolean
+  key_set?: boolean
+  base_url?: string | null
+  api_base_url?: string | null
   context_window?: number
   model_id?: string
 }

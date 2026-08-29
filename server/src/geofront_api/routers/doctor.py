@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 from fastapi.concurrency import run_in_threadpool
-from geomemory import GeoMemory
 from geomemory.services.doctor import (
     doctor_environment,
     doctor_llm_provider,
@@ -18,11 +17,20 @@ router = APIRouter(prefix="/doctor", tags=["doctor"])
 async def doctor() -> dict[str, object]:
     """Environment + active-workspace diagnostics (no secret values).
 
-    Probes the already-open workspace instead of reopening it (reopening the
-    same SQLite database while it is live can deadlock).
+    Runs even with no open workspace — environment checks never require one,
+    and the workspace probe reports a graceful "closed" status instead of 409.
     """
-    ws: GeoMemory = get_state().require_workspace()
+    state = get_state()
     environment = doctor_environment()
+
+    if not state.is_open:
+        return {
+            "environment": environment,
+            "workspace": {"ok": False, "closed": True, "checks": {"status": "no workspace open"}},
+            "workspace_open": {"ok": False, "closed": True, "checks": {"open": False}},
+        }
+
+    ws = state.require_workspace()
     workspace_report = doctor_workspace(ws.path)
 
     try:
@@ -58,6 +66,12 @@ async def doctor() -> dict[str, object]:
 
 @router.get("/llm")
 async def doctor_llm() -> dict[str, object]:
-    """Probe the configured LLM provider configuration (no secret values)."""
-    ws = get_state().require_workspace()
-    return doctor_llm_provider(ws.settings)
+    """Probe the configured LLM provider configuration (no secret values).
+
+    Works without an open workspace by falling back to the gateway's default
+    LLM health (env var + provider defaults).
+    """
+    state = get_state()
+    if state.is_open:
+        return doctor_llm_provider(state.require_workspace().settings)
+    return state.llm_health()  # type: ignore[return-value]

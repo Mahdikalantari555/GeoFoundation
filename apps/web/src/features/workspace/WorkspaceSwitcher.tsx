@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FolderOpen, Plus, X } from 'lucide-react'
 import { useCloseWorkspace, useCreateWorkspace, useOpenWorkspace } from './hooks'
@@ -10,6 +10,27 @@ export function WorkspaceSwitcher() {
   const close = useCloseWorkspace()
   const [path, setPath] = useState('')
   const [name, setName] = useState('')
+  const dirInputRef = useRef<HTMLInputElement>(null)
+
+  function pickDir() {
+    dirInputRef.current?.click()
+  }
+
+  function onDirPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    // webkitdirectory: first file reveals the chosen container dir name
+    const entry = files[0] as File & { webkitRelativePath?: string }
+    const rel = entry.webkitRelativePath ?? ''
+    const dir = rel ? rel.split('/')[0] : ''
+    if (dir) {
+      const base = path.trim()
+      // Compose: if a parent path is already typed, append the picked folder
+      // (browsers hide absolute paths for security — paste the full path to override).
+      setPath(base && !base.endsWith(dir) ? `${base.replace(/\/$/, '')}/${dir}` : dir)
+    }
+    e.target.value = ''
+  }
 
   function submitOpen() {
     if (!path.trim()) return
@@ -30,6 +51,24 @@ export function WorkspaceSwitcher() {
         placeholder={t('workspace.pathPlaceholder')}
         className="w-56 rounded-md border border-gf-border bg-gf-bg px-2 py-1 text-sm outline-none focus:border-gf-accent"
         aria-label={t('workspace.pathPlaceholder')}
+      />
+      <button
+        type="button"
+        onClick={pickDir}
+        title={t('workspace.browse')}
+        className="rounded-md border border-gf-border px-2 py-1 text-sm"
+      >
+        {t('workspace.browse')}
+      </button>
+      <input
+        ref={dirInputRef}
+        type="file"
+        // @ts-expect-error non-standard dir-picking attribute
+        webkitdirectory=""
+        directory=""
+        className="hidden"
+        onChange={onDirPicked}
+        data-testid="workspace-dir-input"
       />
       <input
         value={name}

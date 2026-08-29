@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from ...services.agent import get_agent_service
 from ...state import get_state
 
 router = APIRouter(prefix="/agent/farms", tags=["agent"])
+log = logging.getLogger("geofront.agent.farms")
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -33,8 +35,8 @@ def _workspace_roots() -> list[Path]:
             roots.append(Path(svc._settings.workspace))
             # also include parent (main workspace) sibling runs/
             roots.append(Path(svc._settings.workspace).parent)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        log.debug("workspace roots lookup failed: %s", exc)
     # dedupe preserving order
     seen: set[str] = set()
     uniq: list[Path] = []
@@ -69,7 +71,8 @@ def _find_farms_geojson() -> tuple[Path | None, list[dict[str, Any]]]:
                     best = (cand, feats)
                     if score == 0 and len(feats) > 0:
                         return cand, feats
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            log.debug("skipping farms geojson %s: %s", cand, exc)
             continue
     if best is not None:
         return best
@@ -89,8 +92,8 @@ def _feature_bbox(geom: dict[str, Any]) -> list[float] | None:
                 try:
                     xs.append(float(node[0]))
                     ys.append(float(node[1]))
-                except Exception:
-                    pass
+                except Exception as exc:  # noqa: BLE001
+                    log.debug("bbox coord parse failed: %s", exc)
             else:
                 for part in node:
                     walk(part)
@@ -99,8 +102,8 @@ def _feature_bbox(geom: dict[str, Any]) -> list[float] | None:
         walk(geom)
         if xs and ys:
             return [min(xs), min(ys), max(xs), max(ys)]
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        log.debug("bbox walk failed: %s", exc)
     return None
 
 
@@ -115,9 +118,12 @@ def _report_dirs() -> list[Path]:
         agent_rep = root / "runs" / "reports"
         if agent_rep.is_dir():
             for sub in agent_rep.iterdir():
-                if sub.is_dir() and sub not in dirs:
-                    if ((sub / "stats.csv").exists() or (sub / "report.md").exists()):
-                        dirs.append(sub)
+                if (
+                    sub.is_dir()
+                    and sub not in dirs
+                    and ((sub / "stats.csv").exists() or (sub / "report.md").exists())
+                ):
+                    dirs.append(sub)
     # dedupe
     uniq: dict[str, Path] = {}
     for d in dirs:
@@ -137,18 +143,19 @@ def _parse_stats(stats_path: Path) -> list[dict[str, Any]]:
                     if k in norm and norm[k] not in (None, ""):
                         try:
                             norm[k] = float(norm[k]) if "mean" in k else int(float(norm[k]))
-                        except Exception:
-                            pass
+                        except Exception as exc:  # noqa: BLE001
+                            log.debug("stat coerce failed for %s: %s", k, exc)
                 # ensure stress_label
                 sc = norm.get("stress_class")
                 if sc is not None:
                     try:
                         norm["stress_label"] = CLASS_LABELS.get(int(sc), "?")
-                    except Exception:
+                    except Exception as exc:  # noqa: BLE001
+                        log.debug("stress label parse failed: %s", exc)
                         norm["stress_label"] = "?"
                 rows.append(norm)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        log.debug("stats parse failed for %s: %s", stats_path, exc)
     return rows
 
 
@@ -248,7 +255,8 @@ async def get_farm(farm_id: str) -> dict[str, object]:
         if md_path.exists():
             try:
                 report_md = md_path.read_text(encoding="utf-8")[:20000]
-            except Exception:
+            except Exception as exc:  # noqa: BLE001
+                log.debug("report.md read failed: %s", exc)
                 report_md = None
         map_png = rdir / "map.png"
         report_summary = {
@@ -296,7 +304,8 @@ async def get_farm_report(farm_id: str) -> dict[str, object]:
     if md_path.exists():
         try:
             report_md = md_path.read_text(encoding="utf-8")
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            log.debug("report.md read failed: %s", exc)
             report_md = ""
     # sources embedded in report.md — extract [S#] lines if present
     sources: list[dict[str, Any]] = []
@@ -313,7 +322,7 @@ async def get_farm_report(farm_id: str) -> dict[str, object]:
     trend: dict[str, Any] | None = None
     if stats:
         # find mean key
-        mean_key = next((k for k in stats[0].keys() if k.startswith("mean_")), None)
+        mean_key = next((k for k in stats[0] if k.startswith("mean_")), None)
         if mean_key:
             vals = [r.get(mean_key) for r in stats if isinstance(r.get(mean_key), (int, float))]
             if vals:

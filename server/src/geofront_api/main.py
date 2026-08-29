@@ -1,12 +1,23 @@
 from __future__ import annotations
 
+import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+try:
+    from dotenv import load_dotenv
+
+    # Load .env (and GEOMEMORY_LLM_API_KEY) for local dev. Missing dotenv or
+    # file is non-fatal — production injects env vars directly.
+    load_dotenv()
+except Exception as exc:  # noqa: BLE001 - optional dependency / missing file
+    logging.getLogger("geofront").debug("dotenv load skipped: %s", exc)
 
 from . import __version__
 from .errors import (
@@ -39,6 +50,13 @@ from .routers.workspace import router as workspace_router
 
 API_PREFIX = "/api/v1"
 
+log = logging.getLogger("geofront")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-7s [%(name)s] %(message)s",
+)
+
 DEV_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -50,6 +68,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     import asyncio
 
     get_event_bus().bind(asyncio.get_running_loop())
+    log.info("GeoFoundation gateway starting up (api_prefix=%s)", API_PREFIX)
+    log.info("GeoFoundation gateway ready")
     yield
     from .jobs import get_job_manager
     from .services.agent import reset_agent_service
@@ -70,6 +90,20 @@ def create_app() -> FastAPI:
         ),
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        log.info(
+            "%s %s -> %d (%.1fms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+        return response
     app.add_middleware(
         CORSMiddleware,
         allow_origins=DEV_ORIGINS,

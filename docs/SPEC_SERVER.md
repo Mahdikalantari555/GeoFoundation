@@ -27,11 +27,11 @@
 
 | Method | Route | Body → Maps to |
 |---|---|---|
-| POST | `/workspace/create` | `{path, config?}` → `GeoMemory.create` |
-| POST | `/workspace/open` | `{path}` → `GeoMemory.open` |
+| POST | `/workspace/create` | `{path, name, ...}` → `GeoMemory.create` under `path/<name>/` |
+| POST | `/workspace/open` | `{path}` → `GeoMemory.open` (auto-detects a nested workspace subdir) |
 | POST | `/workspace/close` | → `ws.close()` |
 | GET | `/workspace` | status + `ws.settings` |
-| PUT | `/workspace/settings` | partial config → `ws.update_settings` |
+| PUT | `/workspace/settings` | partial config → `ws.update_settings` (**422 if `llm_api_key_env` is in the body**) |
 | GET | `/workspace/stats` | `ws.stats()` |
 
 Config fields: `name, language(en|fa), offline, batch_size, model_path,
@@ -40,6 +40,12 @@ api = default), llm_api_base_url, llm_model_id, llm_context_window,
 llm_api_key_env`. The API key itself is **server-env-only** (read at call
 time from the named env var, e.g. `GEOMEMORY_LLM_API_KEY`); it is never
 accepted from clients, never persisted, never returned by any endpoint.
+`PUT /workspace/settings` rejects any request that attempts to set
+`llm_api_key_env` with HTTP 422 — clients configure only the *env var name*,
+and the gateway seeds `llm_api_base_url` / `llm_model_id` from
+`GEOMEMORY_LLM_API_BASE_URL` / `GEOMEMORY_LLM_MODEL_ID` in the server env when
+a workspace is created or opened. Workspace files are stored nested under
+`path/<name>/` so multiple workspaces can share a parent directory.
 
 ## Collections
 
@@ -101,12 +107,19 @@ Spaces: `text.nomic.v1` (default), `text.hash.v1` (offline).
 
 ## Doctor
 
+Environment diagnostics run **without** an open workspace (they never return
+409). `GET /doctor` reports a graceful `closed` status when no workspace is
+active; `GET /doctor/llm` falls back to the gateway's default LLM health
+(env var + provider/model defaults) so the key-configuration state is always
+visible.
+
 | Method | Route | Maps to |
 |---|---|---|
+| GET | `/doctor` | `doctor_environment()` + workspace report (or `closed`) |
 | GET | `/doctor/environment` | `doctor_environment()` |
 | GET | `/doctor/workspace?path=` | `doctor_workspace(path)` |
 | GET | `/doctor/roundtrip?path=` | `doctor_workspace_open(path)` |
-| GET | `/doctor/llm` | LLM backend probe: provider, key configured, base URL reachability, model ping |
+| GET | `/doctor/llm` | LLM backend probe: provider, key configured, base URL, model id, context window |
 
 ## Agent (geoagent)
 

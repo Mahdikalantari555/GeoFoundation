@@ -118,7 +118,7 @@ test.describe('M7 smoke', () => {
           answer: '',
           citations: [],
           abstained: true,
-          abstain_reason: 'LLM unavailable — no API key configured.',
+          abstention_reason: 'LLM unavailable — no API key configured.',
         })
       }
 
@@ -160,7 +160,9 @@ test.describe('M7 smoke', () => {
     const pathInput = page.getByPlaceholder(/\/path\/to\/workspace|\/مسیر/)
     await expect(pathInput).toBeVisible()
     await pathInput.fill('/tmp/ws')
-    const createBtn = page.getByRole('button', { name: /Create|ایجاد/ })
+    const wsNameInput = page.getByPlaceholder(/Workspace name|نام فضای کاری/)
+    await wsNameInput.fill('Smoke WS')
+    const createBtn = page.getByTestId('workspace-switcher').getByRole('button', { name: /Create|ایجاد/ })
     await createBtn.click()
     await expect(page.getByTestId('workspace-status')).toContainText(/Smoke WS|open/i, { timeout: 5_000 })
 
@@ -169,7 +171,7 @@ test.describe('M7 smoke', () => {
     await page.getByRole('button', { name: /New collection|مجموعه جدید/ }).click()
     const nameInput = page.getByTestId('collection-name')
     await nameInput.fill('smoke-docs')
-    await page.getByRole('button', { name: /Create|ایجاد/ }).click()
+    await page.getByTestId('collection-form').getByRole('button', { name: /Create|ایجاد/ }).click()
     await expect(page.getByText('smoke-docs')).toBeVisible({ timeout: 5_000 })
 
     // Ingest — smoke that ingest page renders (file upload is mocked)

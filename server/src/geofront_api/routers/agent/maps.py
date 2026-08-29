@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Query
+from fastapi.concurrency import run_in_threadpool
 
 from ...errors import GeoFrontError
 from ...services.agent import get_agent_service
 from ...state import get_state
 
 router = APIRouter(prefix="/agent/maps", tags=["agent"])
+log = logging.getLogger("geofront.agent.maps")
 
 KIND_BY_EXT = {
     ".png": "image",
@@ -38,8 +41,8 @@ def _roots() -> list[Path]:
         if svc.is_initialized:
             roots.append(Path(svc._settings.workspace))
             roots.append(Path(svc._settings.workspace).parent)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        log.debug("maps roots lookup failed: %s", exc)
     seen: set[str] = set()
     uniq: list[Path] = []
     for r in roots:
@@ -132,7 +135,8 @@ async def list_maps(pattern: str = Query(default="runs/**/*")) -> dict[str, obje
                 if counts:
                     legend = [{"class": k, "count": v} for k, v in sorted(counts.items())]
                     break
-            except Exception:
+            except Exception as exc:  # noqa: BLE001
+                log.debug("legend parse failed for %s: %s", a["full_path"], exc)
                 continue
 
     return {
@@ -203,14 +207,18 @@ async def get_zonal(path: str = Query(description="CSV path relative to workspac
     if target is None:
         raise GeoFrontError(code="file_not_found", message=f"CSV not found: {path}", status_code=404)
 
-    rows: list[dict[str, Any]] = []
-    try:
+    def _read() -> list[dict[str, Any]]:
+        rows_local: list[dict[str, Any]] = []
         with open(target, newline="", encoding="utf-8") as fh:
             reader = csv.DictReader(fh)
             for i, r in enumerate(reader):
                 if i >= 500:
                     break
-                rows.append(dict(r))
+                rows_local.append(dict(r))
+        return rows_local
+
+    try:
+        rows = await run_in_threadpool(_read)
     except Exception as exc:
         raise GeoFrontError(code="invalid_csv", message=str(exc), status_code=422) from exc
 

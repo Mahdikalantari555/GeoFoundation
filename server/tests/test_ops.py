@@ -23,9 +23,12 @@ def open_ws(client: TestClient, tmp_path: pytest.PathFactory) -> None:
 
 
 class TestDoctor:
-    def test_requires_workspace(self, client: TestClient) -> None:
+    def test_works_without_workspace(self, client: TestClient) -> None:
         resp = client.get("/api/v1/doctor")
-        assert resp.status_code == 409
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["workspace"]["closed"] is True
+        assert body["workspace_open"]["closed"] is True
 
     def test_diagnostics_report(self, client: TestClient, open_ws: None) -> None:
         resp = client.get("/api/v1/doctor")
@@ -37,6 +40,11 @@ class TestDoctor:
         assert body["environment"]["python_ok"] is True
 
     def test_llm_probe(self, client: TestClient, open_ws: None) -> None:
+        resp = client.get("/api/v1/doctor/llm")
+        assert resp.status_code == 200
+        assert "provider" in resp.json()
+
+    def test_llm_probe_without_workspace(self, client: TestClient) -> None:
         resp = client.get("/api/v1/doctor/llm")
         assert resp.status_code == 200
         assert "provider" in resp.json()

@@ -61,7 +61,30 @@
   },
   "workspace": {
     "namePlaceholder": "نام فضای کاری",
-    "pathPlaceholder": "/مسیر/فضای-کاری"
+    "pathPlaceholder": "/مسیر/فضای-کاری",
+    "browse": "انتخاب…"
+  },
+  "doctor": {
+    "environment": "محیط",
+    "workspace": "فضای کاری",
+    "openProbe": "آزمایش باز بودن فضای کاری",
+    "llm": "ارائه‌دهنده مدل زبانی",
+    "python": "پایتون",
+    "core": "هسته",
+    "optionalDeps": "وابستگی‌های اختیاری",
+    "provider": "ارائه‌دهنده",
+    "model": "مدل",
+    "baseUrl": "نشانی پایه API",
+    "keyEnv": "متغیر محیطی کلید",
+    "keySet": "کلید API تنظیم شده",
+    "keyMissing": "کلید API موجود نیست",
+    "contextWindow": "پنجره متن",
+    "closed": "فضای کاری باز نیست",
+    "collections": "فهرست مجموعه‌ها",
+    "stats": "آمار",
+    "ok": "سالم",
+    "fail": "خطا",
+    "detail": "جزئیات"
   },
   "settings": {
     "title": "تنظیمات فضای کاری",
@@ -81,7 +104,7 @@
     "llmModelId": "شناسه مدل",
     "llmContextWindow": "پنجره متن",
     "llmKeyEnv": "متغیر محیطی کلید API",
-    "llmKeyHint": "خود کلید API فقط از محیط سرور خوانده می‌شود — هرگز در این رابط ذخیره یا ارسال نمی‌شود.",
+    "llmKeyHint": "کلید API را نمی‌توان اینجا تنظیم کرد. فقط از محیط سرور (متغیر محیطی بالا) خوانده می‌شود — هرگز ذخیره یا ارسال نمی‌شود.",
     "saved": "ذخیره شد"
   },
   "collections": {

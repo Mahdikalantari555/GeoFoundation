@@ -10,6 +10,11 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
+    // Allow running against a system-installed Chromium when the Playwright
+    // download CDN is unreachable (e.g. geo-blocked): PLAYWRIGHT_CHROMIUM=/usr/bin/chromium-browser
+    ...(process.env.PLAYWRIGHT_CHROMIUM
+      ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM } }
+      : {}),
   },
   projects: [
     {

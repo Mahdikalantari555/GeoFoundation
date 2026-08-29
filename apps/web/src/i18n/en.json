@@ -61,7 +61,30 @@
   },
   "workspace": {
     "namePlaceholder": "Workspace name",
-    "pathPlaceholder": "/path/to/workspace"
+    "pathPlaceholder": "/path/to/workspace",
+    "browse": "Browse…"
+  },
+  "doctor": {
+    "environment": "Environment",
+    "workspace": "Workspace",
+    "openProbe": "Workspace Open Probe",
+    "llm": "LLM Provider",
+    "python": "Python",
+    "core": "Core",
+    "optionalDeps": "Optional dependencies",
+    "provider": "Provider",
+    "model": "Model",
+    "baseUrl": "API base URL",
+    "keyEnv": "API key env",
+    "keySet": "API key set",
+    "keyMissing": "API key missing",
+    "contextWindow": "Context window",
+    "closed": "No workspace open",
+    "collections": "List collections",
+    "stats": "Stats",
+    "ok": "OK",
+    "fail": "FAIL",
+    "detail": "Detail"
   },
   "settings": {
     "title": "Workspace Settings",
@@ -81,7 +104,7 @@
     "llmModelId": "Model ID",
     "llmContextWindow": "Context window",
     "llmKeyEnv": "API key env var",
-    "llmKeyHint": "The API key itself is read from the server environment only — never stored or sent through this UI.",
+    "llmKeyHint": "The API key cannot be set here. It is read from the server environment only (env var named above) — never stored or sent through this UI.",
     "saved": "Saved"
   },
   "collections": {

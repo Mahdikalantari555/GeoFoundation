@@ -52,12 +52,18 @@ class AppState:
         settings = self.workspace.settings if self.workspace is not None else None
         provider = getattr(settings, "llm_provider", None) or "api"
         key_env = getattr(settings, "llm_api_key_env", None) or "GEOMEMORY_LLM_API_KEY"
-        base_url = getattr(settings, "llm_api_base_url", None)
+        base_url = getattr(settings, "llm_api_base_url", None) or os.environ.get(
+            "GEOMEMORY_LLM_API_BASE_URL"
+        )
+        model_id = getattr(settings, "llm_model_id", None) or os.environ.get(
+            "GEOMEMORY_LLM_MODEL_ID"
+        )
         return {
             "provider": provider,
             "key_env": key_env,
             "key_configured": bool(os.environ.get(key_env, "")),
             "base_url": base_url,
+            "model_id": model_id,
         }
 
 

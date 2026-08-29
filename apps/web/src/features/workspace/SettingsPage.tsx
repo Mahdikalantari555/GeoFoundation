@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Save } from 'lucide-react'
+import { FolderOpen, Save } from 'lucide-react'
 import { ApiError } from '@/api/client'
 import type { UpdateSettingsRequest, WorkspaceSettings } from '@/api/workspace'
 import { useUpdateSettings, useWorkspace } from './hooks'
@@ -16,6 +16,29 @@ export function SettingsPage() {
   const [form, setForm] = useState<WorkspaceSettings | null>(null)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const modelDirRef = useRef<HTMLInputElement>(null)
+  const embedDirRef = useRef<HTMLInputElement>(null)
+  const visionDirRef = useRef<HTMLInputElement>(null)
+
+  function pickDir(
+    ref: React.RefObject<HTMLInputElement | null>,
+    key: 'model_path' | 'embedding_path' | 'vision_path',
+  ) {
+    const input = ref.current
+    if (!input) return
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files
+      if (files && files.length > 0) {
+        const f = files[0] as File & { webkitRelativePath?: string }
+        const dir = (f.webkitRelativePath ?? '').split('/')[0] || f.name
+        const base = (form?.[key] ?? '').trim()
+        // Compose with any existing parent path; paste the full path to override.
+        set(key, base && !base.endsWith(dir) ? `${base.replace(/\/$/, '')}/${dir}` : dir)
+      }
+      ;(e.target as HTMLInputElement).value = ''
+    }
+    input.click()
+  }
 
   useEffect(() => {
     if (settings) setForm(settings)
@@ -116,30 +139,72 @@ export function SettingsPage() {
 
       <section className="space-y-3 rounded-lg border border-gf-border bg-gf-panel p-4">
         <h2 className="text-sm font-medium text-gf-muted">{t('settings.models')}</h2>
-        <label className="block text-sm">
+        <label className="flex items-center gap-2 text-sm">
           {t('settings.modelPath')}
           <input
             className={inputCls}
             value={form.model_path ?? ''}
             onChange={(e) => set('model_path', e.target.value || null)}
           />
+          <button
+            type="button"
+            onClick={() => pickDir(modelDirRef, 'model_path')}
+            className="shrink-0 rounded-md border border-gf-border px-2 py-1 text-xs"
+            title={t('workspace.browse')}
+          >
+            <FolderOpen className="size-3.5" />
+          </button>
         </label>
-        <label className="block text-sm">
+        <label className="flex items-center gap-2 text-sm">
           {t('settings.embeddingPath')}
           <input
             className={inputCls}
             value={form.embedding_path ?? ''}
             onChange={(e) => set('embedding_path', e.target.value || null)}
           />
+          <button
+            type="button"
+            onClick={() => pickDir(embedDirRef, 'embedding_path')}
+            className="shrink-0 rounded-md border border-gf-border px-2 py-1 text-xs"
+            title={t('workspace.browse')}
+          >
+            <FolderOpen className="size-3.5" />
+          </button>
         </label>
-        <label className="block text-sm">
+        <label className="flex items-center gap-2 text-sm">
           {t('settings.visionPath')}
           <input
             className={inputCls}
             value={form.vision_path ?? ''}
             onChange={(e) => set('vision_path', e.target.value || null)}
           />
+          <button
+            type="button"
+            onClick={() => pickDir(visionDirRef, 'vision_path')}
+            className="shrink-0 rounded-md border border-gf-border px-2 py-1 text-xs"
+            title={t('workspace.browse')}
+          >
+            <FolderOpen className="size-3.5" />
+          </button>
         </label>
+        <input
+          ref={modelDirRef}
+          type="file"
+          className="hidden"
+          {...{ webkitdirectory: '' }}
+        />
+        <input
+          ref={embedDirRef}
+          type="file"
+          className="hidden"
+          {...{ webkitdirectory: '' }}
+        />
+        <input
+          ref={visionDirRef}
+          type="file"
+          className="hidden"
+          {...{ webkitdirectory: '' }}
+        />
       </section>
 
       <section className="space-y-3 rounded-lg border border-gf-border bg-gf-panel p-4">
@@ -187,7 +252,7 @@ export function SettingsPage() {
             onChange={(e) => set('llm_api_key_env', e.target.value)}
           />
         </label>
-        <p className="text-xs text-gf-muted">{t('settings.llmKeyHint')}</p>
+        <p className="text-xs text-gf-err">{t('settings.llmKeyHint')}</p>
       </section>
 
       <div className="flex items-center gap-3">
