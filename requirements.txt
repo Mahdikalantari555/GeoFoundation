@@ -1,0 +1,10 @@
+# GeoFoundation root requirements
+# Installed in editable mode via:
+#   pip install -e libs/geomemory -e libs/geoagent -e server
+# Extra backends:
+#   pip install "geomemory[st]"        # sentence-transformers dense embeddings
+#   pip install "geomemory[onnx]"      # onnxruntime + tokenizers dense embeddings
+#   pip install "geomemory[ai]"        # txtai + llama-cpp-python
+#   pip install "geomemory[rs]"        # rasterio + shapely + geopandas + Pillow
+#   pip install "geomemory[ui]"        # streamlit dashboard
+#   pip install "geomemory[dev]"       # pytest + mypy + ruff

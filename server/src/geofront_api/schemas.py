@@ -85,9 +85,10 @@ class UpdateSettingsRequest(BaseModel):
     llm_model_id: str | None = None
     llm_context_window: int | None = Field(default=None, ge=1024, le=200000)
     embedding_backend: str | None = Field(
-        default=None, pattern="^(hashing|llama-cpp|sentence-transformers)$"
+        default=None, pattern="^(hashing|llama-cpp|sentence-transformers|onnx)$"
     )
     st_model_name: str | None = None
+    onnx_model_name: str | None = None
     vector_backend: str | None = Field(default=None, pattern="^(local|qdrant)$")
     qdrant_url: str | None = None
     qdrant_api_key: str | None = None
@@ -152,9 +153,17 @@ class RunEvalRequest(BaseModel):
     config: str | None = Field(default=None, description="Optional benchmark config JSON path")
 
 
+class DownloadModelRequest(BaseModel):
+    """Request body for POST /models/download."""
+
+    model_config = {"extra": "forbid"}
+
+    model_name: str = Field(min_length=1, max_length=200)
+    backend: str
+
+
 class FeedbackRequest(BaseModel):
     """Immutable feedback event (answer rating, source relevance, …)."""
-
     model_config = {"extra": "forbid"}
 
     target_type: Literal["answer", "retrieval_run", "segment", "citation"]

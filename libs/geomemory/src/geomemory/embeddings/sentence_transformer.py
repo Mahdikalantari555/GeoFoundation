@@ -30,11 +30,12 @@ class SentenceTransformerEmbedder:
     a stable ``space_id`` derived from the model name.
     """
 
-    def __init__(self, model_name: str, *, model_id: str | None = None) -> None:
+    def __init__(self, model_name: str, *, model_id: str | None = None, offline: bool = False) -> None:
         self.model_name = model_name
         self._model_id = model_id or model_name
         self._model: Any = None
         self._family = _model_family(model_name)
+        self._offline = offline
 
     @property
     def space_id(self) -> str:
@@ -47,6 +48,30 @@ class SentenceTransformerEmbedder:
 
     def _load(self) -> Any:  # pragma: no cover - exercised via stub in tests
         if self._model is None:
+            # Consult the hub first: auto-download when online, 503-style
+            # EmbeddingUnavailableError when offline and uncached.
+            try:
+                from geomemory.embeddings.hub import EmbeddingModelHub
+
+                hub = EmbeddingModelHub()
+                if hub.find_model(self.model_name, backend="st") is None:
+                    if self._offline:
+                        from geomemory.core.exceptions import EmbeddingUnavailableError
+
+                        raise EmbeddingUnavailableError(
+                            f"Model '{self.model_name}' is not cached locally.",
+                            offline=True,
+                            hint="set offline=false or pre-download",
+                        )
+                    try:
+                        hub.download(self.model_name, backend="st")
+                    except ImportError:
+                        pass  # fall through to SentenceTransformer auto-fetch
+            except Exception as exc:  # noqa: BLE001 - hub is best-effort
+                from geomemory.core.exceptions import EmbeddingUnavailableError
+
+                if isinstance(exc, (EmbeddingUnavailableError, ImportError)):
+                    raise
             try:
                 from sentence_transformers import SentenceTransformer
             except ImportError as exc:

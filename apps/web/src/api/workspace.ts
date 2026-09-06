@@ -4,6 +4,7 @@ import { ApiError, type ApiErrorBody } from './client'
 export type CreateWorkspaceRequest = components['schemas']['CreateWorkspaceRequest']
 export type OpenWorkspaceRequest = components['schemas']['OpenWorkspaceRequest']
 export type UpdateSettingsRequest = components['schemas']['UpdateSettingsRequest']
+export type DownloadModelRequest = components['schemas']['DownloadModelRequest']
 
 /** Mirrors geomemory WorkspaceSettings (returned as inline JSON, not a named schema). */
 export type WorkspaceSettings = {
@@ -26,6 +27,7 @@ export type WorkspaceSettings = {
   llm_context_window: number
   embedding_backend: string
   st_model_name: string
+  onnx_model_name: string
   vector_backend: string
   qdrant_url: string | null
   qdrant_api_key: string | null
@@ -37,6 +39,21 @@ export type WorkspaceStatus = {
   path: string | null
   settings: WorkspaceSettings | null
 }
+
+export type EmbeddingModel = {
+  id: string
+  name: string
+  backend: string
+  path: string
+  size_bytes: number
+  downloaded: boolean
+  loadable: boolean
+  space_id: string
+}
+
+export type ModelDownloadResponse =
+  | { status: 'already_downloaded'; id: string; path: string }
+  | { job_id: string; model_name: string; backend: string }
 
 const BASE = '/api/v1'
 
@@ -77,4 +94,17 @@ export const workspaceApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+}
+
+export const modelsApi = {
+  list: () => request<EmbeddingModel[]>('/models'),
+  download: (body: DownloadModelRequest) =>
+    request<ModelDownloadResponse>('/models/download', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  status: (modelId: string) =>
+    request<{ id: string; downloaded: boolean; loadable: boolean; path: string | null; size_bytes: number; space_id: string | null }>(
+      `/models/${encodeURIComponent(modelId)}/status`
+    ),
 }

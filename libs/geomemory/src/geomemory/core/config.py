@@ -14,6 +14,7 @@ from geomemory.core.models import WorkspaceSettings
 ENV_OVERRIDES: dict[str, str] = {
     "GEOMEMORY_QDRANT_URL": "qdrant_url",
     "GEOMEMORY_ST_MODEL": "st_model_name",
+    "GEOMEMORY_ONNX_MODEL": "onnx_model_name",
     "GEOMEMORY_EMBEDDING_BACKEND": "embedding_backend",
     "GEOMEMORY_VECTOR_BACKEND": "vector_backend",
     "GEOMEMORY_VISION_PATH": "vision_path",

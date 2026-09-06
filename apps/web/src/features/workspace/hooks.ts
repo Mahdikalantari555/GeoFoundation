@@ -53,12 +53,7 @@ export function useCloseWorkspace() {
   })
 }
 
-export function useUpdateSettings() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (body: UpdateSettingsRequest) => workspaceApi.updateSettings(body),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: workspaceKeys.status }),
-  })
-}
+// Re-export the canonical useUpdateSettings from modelHooks (gateway-included)
+export { useUpdateSettings } from './modelHooks'
 
 export type { WorkspaceSettings }

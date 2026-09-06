@@ -78,3 +78,17 @@ class BandMappingError(GeoMemoryError):
 
 class ValidationError(GeoMemoryError):
     """Raised when domain validation fails outside Pydantic's scope."""
+
+
+class EmbeddingUnavailableError(GeoMemoryError):
+    """Raised when a dense embedding model is missing and cannot be fetched.
+
+    Attributes:
+        offline: whether the workspace is in offline mode.
+        hint: human-readable remediation hint.
+    """
+
+    def __init__(self, message: str, *, offline: bool = False, hint: str | None = None) -> None:
+        super().__init__(message)
+        self.offline = offline
+        self.hint = hint

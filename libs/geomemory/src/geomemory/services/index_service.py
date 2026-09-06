@@ -215,11 +215,12 @@ class IndexService:
 
     def _embedder(
         self, model_path: str | None
-    ) -> HashingTextEmbedder | LlamaCppTextEmbedder | SentenceTransformerEmbedder:
+    ) -> HashingTextEmbedder | LlamaCppTextEmbedder | Any:
         """Return the configured embedder based on workspace settings.
 
         Dispatch order when ``self._settings`` is available:
           - ``sentence-transformers``: lazy-imported ST embedder.
+          - ``onnx``: CPU-friendly ONNX embedder (Xenova quantized default).
           - ``llama-cpp`` / fallback when ``model_path`` is set: GGUF embedder.
           - ``hashing`` / fallback: offline hashing embedder.
         Falls back to the legacy (model_path ? llama-cpp : hashing) behavior when
@@ -229,6 +230,8 @@ class IndexService:
         if settings is not None:
             if settings.embedding_backend == "sentence-transformers":
                 return self._sentence_transformer_embedder(settings)
+            if settings.embedding_backend == "onnx":
+                return self._onnx_embedder(settings)
             if settings.embedding_backend == "llama-cpp":
                 if model_path:
                     return LlamaCppTextEmbedder(model_path)
@@ -254,7 +257,20 @@ class IndexService:
                 "`sentence-transformers` package. Install it with "
                 "`pip install geomemory[st]`."
             ) from exc
-        return SentenceTransformerEmbedder(settings.st_model_name)
+        return SentenceTransformerEmbedder(
+            settings.st_model_name, offline=settings.offline
+        )
+
+    def _onnx_embedder(self, settings: WorkspaceSettings) -> Any:
+        """Lazily import and construct the ONNX embedder."""
+        try:
+            from geomemory.embeddings.onnx_text import OnnxTextEmbedder
+        except ImportError as exc:
+            raise ImportError(
+                "The onnx backend requires the optional `onnxruntime` + "
+                "`tokenizers` packages. Install with `pip install geomemory[onnx]`."
+            ) from exc
+        return OnnxTextEmbedder(settings.onnx_model_name, offline=settings.offline)
 
     def _qdrant_backend(self, space_id: str) -> QdrantBackend:
         """Lazily import and construct the Qdrant backend for a space."""

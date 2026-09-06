@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.concurrency import run_in_threadpool
 from geomemory.services.doctor import (
+    doctor_embedding,
     doctor_environment,
     doctor_llm_provider,
     doctor_workspace,
@@ -28,6 +29,7 @@ async def doctor() -> dict[str, object]:
             "environment": environment,
             "workspace": {"ok": False, "closed": True, "checks": {"status": "no workspace open"}},
             "workspace_open": {"ok": False, "closed": True, "checks": {"open": False}},
+            "embedding": {"hub_count": 0, "downloaded": 0, "active_backend": None, "active_model": None},
         }
 
     ws = state.require_workspace()
@@ -57,10 +59,13 @@ async def doctor() -> dict[str, object]:
     if collections_err is not None:
         workspace_open["checks"]["open_error"] = collections_err
 
+    embedding = await run_in_threadpool(doctor_embedding, ws.settings)
+
     return {
         "environment": environment,
         "workspace": workspace_report,
         "workspace_open": workspace_open,
+        "embedding": embedding,
     }
 
 

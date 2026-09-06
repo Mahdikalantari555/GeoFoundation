@@ -73,6 +73,8 @@ export function DoctorPage() {
   const llmKeySet = Boolean(llm?.key_set ?? llm?.key_configured)
   const llmBaseUrl = llm?.base_url ?? llm?.api_base_url ?? null
 
+  const emb = (doctor?.embedding ?? {}) as Record<string, unknown>
+
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <h1 className="text-2xl font-semibold">{t('nav.doctor')}</h1>
@@ -168,6 +170,33 @@ export function DoctorPage() {
           </Section>
         </>
       )}
+
+      {/* ── Embedding Models ───────────────────────────────── */}
+      <Section title={t('doctor.embedding')}>
+        {!doctor || doctor.workspace?.closed ? (
+          <p className="text-sm text-gf-muted">{t('doctor.closed')}</p>
+        ) : (
+          <div className="space-y-1">
+            <Row label={t('doctor.hubCount')}>
+              <span className="font-mono">{String(emb.hub_count ?? 0)}</span>
+            </Row>
+            <Row label={t('doctor.downloaded')}>
+              <span className="font-mono">{String(emb.downloaded ?? 0)}</span>
+            </Row>
+            <Row label={t('doctor.activeBackend')}>
+              <span className="font-mono">{String(emb.active_backend ?? '—')}</span>
+            </Row>
+            <Row label={t('doctor.activeModel')}>
+              <span className="font-mono text-xs">{String(emb.active_model ?? '—')}</span>
+            </Row>
+            {emb.active_space_id && (
+              <Row label={t('doctor.activeSpaceId')}>
+                <span className="font-mono text-xs">{String(emb.active_space_id)}</span>
+              </Row>
+            )}
+          </div>
+        )}
+      </Section>
 
       <Section title={t('doctor.llm')}>
         {llmLoading && <p className="text-sm text-gf-muted">Probing…</p>}

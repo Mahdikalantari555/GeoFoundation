@@ -177,8 +177,11 @@ class WorkspaceSettings(GeoMemoryModel):
     llm_context_window: int = 32768
 
     # Embedding backend selection (additive; unset preserves hashing/llama-cpp baseline).
-    embedding_backend: Literal["hashing", "llama-cpp", "sentence-transformers"] = "hashing"
+    embedding_backend: Literal["hashing", "llama-cpp", "sentence-transformers", "onnx"] = (
+        "hashing"
+    )
     st_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    onnx_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     # Vector backend selection (additive; default 'local' preserves on-disk VectorBackend).
     vector_backend: Literal["local", "qdrant"] = "local"

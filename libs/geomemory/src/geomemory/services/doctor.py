@@ -30,6 +30,9 @@ OPTIONAL_DEPS: list[tuple[str, str, str]] = [
     ("docx", "python-docx", "DOCX parsing"),
     ("streamlit", "streamlit", "reference dashboard"),
     ("torch", "torch", "OLMoEarth vision embeddings"),
+    ("onnxruntime", "onnxruntime", "ONNX dense text embeddings (CPU)"),
+    ("tokenizers", "tokenizers", "ONNX tokenizer backend"),
+    ("huggingface_hub", "huggingface_hub", "embedding model download hub"),
 ]
 
 CORE_DEPS: list[tuple[str, str]] = [
@@ -97,6 +100,7 @@ def doctor_workspace(path: str | Path) -> dict[str, Any]:
             report["checks"]["qdrant"] = doctor_qdrant(loaded)
             report["checks"]["pdf_parser"] = doctor_pdf_parser(loaded)
             report["checks"]["vision"] = doctor_vision(loaded)
+            report["checks"]["embedding"] = doctor_embedding(loaded)
         except Exception:  # noqa: BLE001 - config parsing error
             settings_ok = False
     report["checks"]["settings_valid"] = settings_ok
@@ -209,6 +213,33 @@ def doctor_vision(settings: WorkspaceSettings) -> dict[str, Any]:
         "vision_path_configured": vision_path is not None,
         "checkpoint_exists": checkpoint_exists,
     }
+
+
+def doctor_embedding(settings: WorkspaceSettings) -> dict[str, Any]:
+    """Report embedding hub inventory + resolved active model/space."""
+    try:
+        from geomemory.embeddings.hub import EmbeddingModelHub
+
+        hub = EmbeddingModelHub(embedding_path=settings.embedding_path)
+        active_model = (
+            settings.onnx_model_name
+            if settings.embedding_backend == "onnx"
+            else settings.st_model_name
+            if settings.embedding_backend == "sentence-transformers"
+            else None
+        )
+        return hub.summary(
+            active_backend=settings.embedding_backend, active_model=active_model
+        )
+    except Exception as exc:  # noqa: BLE001 - scan is best-effort
+        return {
+            "hub_count": 0,
+            "downloaded": 0,
+            "active_backend": settings.embedding_backend,
+            "active_model": None,
+            "active_space_id": None,
+            "error": str(exc),
+        }
 
 
 def doctor_workspace_open(path: str | Path) -> dict[str, Any]:

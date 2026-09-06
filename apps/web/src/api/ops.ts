@@ -4,6 +4,13 @@ export interface DoctorReport {
   environment: Record<string, unknown>
   workspace: Record<string, unknown>
   workspace_open: Record<string, unknown>
+  embedding: {
+    hub_count: number
+    downloaded: number
+    active_backend: string | null
+    active_model: string | null
+    active_space_id: string | null
+  }
 }
 
 export interface LLMReport {

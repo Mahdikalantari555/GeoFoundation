@@ -49,6 +49,13 @@ rs = [
 # Sentence-transformers dense text embeddings
 st = [
     "sentence-transformers>=3.0",
+    "huggingface-hub>=0.23",
+]
+# ONNX dense text embeddings (CPU-friendly, Xenova quantized default)
+onnx = [
+    "onnxruntime>=1.18",
+    "tokenizers>=0.15",
+    "huggingface-hub>=0.23",
 ]
 # Qdrant server-mode vector backend
 vector = [
