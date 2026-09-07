@@ -28,6 +28,7 @@ from geomemory.core.models import (
 from geomemory.embeddings.hashing_text import HashingTextEmbedder
 from geomemory.embeddings.llama_cpp_text import LlamaCppTextEmbedder
 from geomemory.index.manifest import create_manifest, load_manifest, write_manifest
+from geomemory.index.storage_backend import StorageBackend
 from geomemory.index.vector_backend import VectorBackend
 from geomemory.storage.repositories.embedding_repo import EmbeddingRepository
 
@@ -110,23 +111,10 @@ class IndexService:
                 )
                 vectors.append(vec)
 
-        if self._settings is not None and self._settings.vector_backend == "qdrant":
-            # Server-mode Qdrant backend: vectors live server-side, no disk save.
-            qdrant = self._qdrant_backend(space_id)
-            if records:
-                qdrant.upsert(records, embeddings=np.stack(vectors))
-            qdrant.count()  # ensure reachable; raises on connection failure
-        else:
-            # Local on-disk backend (default).
-            if VectorBackend.exists(backend_dir):
-                backend: VectorBackend = VectorBackend.load(backend_dir, space_id=space_id)
-                if records:
-                    backend.upsert(records, embeddings=np.stack(vectors))
-            else:
-                backend = VectorBackend(space_id=space_id)
-                if records:
-                    backend.upsert(records, embeddings=np.stack(vectors))
-            backend.save(backend_dir)
+        backend = self._storage_backend(space_id)
+        if records:
+            backend.upsert(records, embeddings=np.stack(vectors))
+        backend.save(backend_dir)
 
         manifest = create_manifest(
             space_id=space_id,
@@ -161,7 +149,7 @@ class IndexService:
         """Dense search over a persisted or server-side index.
 
         Returns an empty list when no index exists for the space.
-        Routes to Qdrant when ``vector_backend`` is ``qdrant``; otherwise local.
+        Dispatches via StorageBackend factory.
         """
         settings = self._settings
         use_qdrant = (
@@ -189,18 +177,27 @@ class IndexService:
             return backend.search(request)
 
         backend_dir = self.index_dir / space_id
-        if not VectorBackend.exists(backend_dir):
+        backend = self._storage_backend(space_id)
+        if not backend.exists(backend_dir):
             return []
-        local_backend = VectorBackend.load(backend_dir, space_id=space_id)
+        # Load persisted backend
+        try:
+            # LanceBackend and VectorBackend have compatible load signatures
+            loaded = type(backend).load(backend_dir, space_id=space_id)  # type: ignore[attr-defined]
+            backend = loaded
+        except Exception:
+            return []
         embedder = self._embedder(model_path)
-        manifest = load_manifest(backend_dir)
-        # Mismatch guard: warn if the query embedder differs from the one that built the index.
-        if manifest.model_id != embedder.model_id:
-            warnings.warn(
-                f"embedding model mismatch: index built with '{manifest.model_id}' "
-                f"but querying with '{embedder.model_id}'. Rebuild required for reliable results.",
-                stacklevel=2,
-            )
+        try:
+            manifest = load_manifest(backend_dir)
+            if manifest.model_id != embedder.model_id:
+                warnings.warn(
+                    f"embedding model mismatch: index built with '{manifest.model_id}' "
+                    f"but querying with '{embedder.model_id}'. Rebuild required for reliable results.",
+                    stacklevel=2,
+                )
+        except Exception:
+            pass
         query_vec = embedder.embed([query])[0]
         request = SearchRequest(
             query=query,
@@ -209,7 +206,7 @@ class IndexService:
             top_k=top_k,
             top_n=top_k,
         )
-        return local_backend.search(request)
+        return backend.search(request)
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -287,6 +284,22 @@ class IndexService:
             url=settings.qdrant_url if settings else None,
             api_key=settings.qdrant_api_key if settings else None,
         )
+
+    def _storage_backend(self, space_id: str) -> StorageBackend:
+        """Factory dispatch based on settings.vector_backend."""
+        settings = self._settings
+        backend_name = getattr(settings, "vector_backend", "lancedb") if settings else "lancedb"
+        if backend_name == "qdrant":
+            return self._qdrant_backend(space_id)  # type: ignore[return-value]
+        if backend_name in ("local", "numpy"):
+            return VectorBackend(space_id=space_id)  # type: ignore[return-value]
+        # default lancedb
+        try:
+            from geomemory.index.lance_backend import LanceBackend
+
+            return LanceBackend(space_id=space_id)  # type: ignore[return-value]
+        except ImportError:
+            return VectorBackend(space_id=space_id)  # type: ignore[return-value]
 
     def _load_segments(self) -> list[dict[str, Any]]:
         """Load all segments from SQLite with parsed JSON fields."""

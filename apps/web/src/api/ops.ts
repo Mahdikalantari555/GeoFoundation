@@ -75,4 +75,46 @@ export const opsApi = {
         return r
       }
     ),
+
+  listCandidates: (state?: string) =>
+    fetch(`${BASE}/feedback/candidates${state ? `?state=${encodeURIComponent(state)}` : ''}`).then((r) => {
+      if (!r.ok) throw new Error(`List candidates failed: ${r.status}`)
+      return r.json() as Promise<unknown[]>
+    }),
+
+  reviewCandidate: (id: string, new_state: string, reviewer_id?: string, note?: string) =>
+    fetch(`${BASE}/feedback/candidates/${encodeURIComponent(id)}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_state, reviewer_id, note }),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`Review failed: ${r.status}`)
+      return r.json()
+    }),
+
+  listProposals: (status?: string) =>
+    fetch(`${BASE}/feedback/proposals${status ? `?status=${encodeURIComponent(status)}` : ''}`).then((r) => {
+      if (!r.ok) throw new Error(`List proposals failed: ${r.status}`)
+      return r.json() as Promise<unknown[]>
+    }),
+
+  approveProposal: (id: string, reviewer_id?: string, note?: string) =>
+    fetch(`${BASE}/feedback/proposals/${encodeURIComponent(id)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer_id, note }),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`Approve failed: ${r.status}`)
+      return r.json()
+    }),
+
+  rejectProposal: (id: string, reviewer_id?: string, note?: string) =>
+    fetch(`${BASE}/feedback/proposals/${encodeURIComponent(id)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer_id, note }),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`Reject failed: ${r.status}`)
+      return r.json()
+    }),
 }

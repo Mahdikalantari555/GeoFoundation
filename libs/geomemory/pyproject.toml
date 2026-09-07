@@ -61,6 +61,10 @@ onnx = [
 vector = [
     "qdrant-client>=1.10",
 ]
+# LanceDB embedded vector backend
+lancedb = [
+    "pylancedb>=0.5",
+]
 # Vision (image embeddings via OLMoEarth Nano torch weights)
 vision = [
     "torch>=2.0",

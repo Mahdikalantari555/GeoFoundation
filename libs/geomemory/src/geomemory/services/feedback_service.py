@@ -17,6 +17,9 @@ class FeedbackService:
         self.conn = conn
         self.feedback_repo = FeedbackRepository(conn)
         self.dataset_repo = DatasetExampleRepository(conn)
+        from geomemory.services.candidate_memory_service import CandidateMemoryService
+
+        self.candidate_service = CandidateMemoryService(conn)
 
     def record_feedback(self, event: FeedbackEvent) -> FeedbackEvent:
         """Record an immutable feedback event."""
@@ -36,3 +39,15 @@ class FeedbackService:
         examples = self.dataset_repo.list_by_task(task_type)
         accepted = [e for e in examples if e.review_state == "accepted"]
         return export_jsonl(task_type, accepted, output_dir)
+
+    def promote_to_candidate(self, event_ids: list[str], content: str, memory_type: str = "fact", author: str | None = None) -> Any:
+        """Promote feedback events to a candidate memory with scoring."""
+        from geomemory.feedback.scoring import MemoryScorer
+
+        cm = self.candidate_service.create(content, memory_type=memory_type, source_feedback_ids=event_ids, author=author)
+        scorer = MemoryScorer()
+        # Simple signal: confirming count = len(event_ids)
+        score = scorer.score(confirming=len(event_ids))
+        self.candidate_service.score(cm.id, {"confirming": len(event_ids)})
+        updated = self.candidate_service.get(cm.id)
+        return updated or cm

@@ -89,7 +89,7 @@ class UpdateSettingsRequest(BaseModel):
     )
     st_model_name: str | None = None
     onnx_model_name: str | None = None
-    vector_backend: str | None = Field(default=None, pattern="^(local|qdrant)$")
+    vector_backend: str | None = Field(default=None, pattern="^(lancedb|local|numpy|qdrant)$")
     qdrant_url: str | None = None
     qdrant_api_key: str | None = None
     pdf_parser: str | None = Field(default=None, pattern="^(auto|opendataloader|pymupdf)$")

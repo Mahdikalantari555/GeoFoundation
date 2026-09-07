@@ -326,6 +326,48 @@ CREATE INDEX IF NOT EXISTS idx_job_type ON job(type);
 -- Migrations
 -- ─────────────────────────────────────────────────────────────────────────────
 
+CREATE TABLE IF NOT EXISTS candidate_memory (
+    id                  TEXT PRIMARY KEY,
+    content             TEXT NOT NULL,
+    memory_type         TEXT NOT NULL DEFAULT 'fact',
+    source_feedback_ids TEXT NOT NULL DEFAULT '[]',
+    confidence_score    REAL NOT NULL DEFAULT 5.0,
+    state               TEXT NOT NULL DEFAULT 'proposed',
+    author              TEXT,
+    audit_trail         TEXT NOT NULL DEFAULT '[]',
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (memory_type IN ('fact', 'correction', 'annotation', 'preference')),
+    CHECK (state IN ('proposed', 'supported', 'verified', 'rejected'))
+);
+CREATE INDEX IF NOT EXISTS idx_candidate_state ON candidate_memory(state);
+CREATE INDEX IF NOT EXISTS idx_candidate_score ON candidate_memory(confidence_score);
+
+CREATE TABLE IF NOT EXISTS knowledge_change_proposal (
+    id                      TEXT PRIMARY KEY,
+    proposal_type           TEXT NOT NULL,
+    diff                    TEXT NOT NULL DEFAULT '{}',
+    source_candidate_ids    TEXT NOT NULL DEFAULT '[]',
+    confidence              REAL NOT NULL DEFAULT 0.0,
+    status                  TEXT NOT NULL DEFAULT 'pending',
+    created_at              TEXT NOT NULL DEFAULT (datetime('now')),
+    reviewed_at             TEXT,
+    reviewer_id             TEXT,
+    review_note             TEXT,
+    CHECK (proposal_type IN ('graph_relation', 'markdown_document', 'metadata_update', 'entity_create')),
+    CHECK (status IN ('pending', 'approved', 'rejected'))
+);
+CREATE INDEX IF NOT EXISTS idx_proposal_status ON knowledge_change_proposal(status);
+CREATE INDEX IF NOT EXISTS idx_proposal_type ON knowledge_change_proposal(proposal_type);
+
+CREATE TABLE IF NOT EXISTS provenance_chain (
+    id              TEXT PRIMARY KEY,
+    candidate_id    TEXT NOT NULL REFERENCES candidate_memory(id) ON DELETE CASCADE,
+    feedback_id     TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_provenance_candidate ON provenance_chain(candidate_id);
+
 CREATE TABLE IF NOT EXISTS schema_migration (
     version     INTEGER PRIMARY KEY,
     applied_at  TEXT NOT NULL DEFAULT (datetime('now')),

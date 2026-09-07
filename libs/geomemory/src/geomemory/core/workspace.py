@@ -51,6 +51,7 @@ from geomemory.core.models import (
 from geomemory.retrieval.fusion import rrf_fuse
 from geomemory.retrieval.search_service import SearchService, apply_hit_filters
 from geomemory.storage import connect, initialize, migrate, schema_sql
+from geomemory.storage.asset_layout import AssetLayout
 from geomemory.storage.object_store import ObjectStore
 
 WORKSPACE_MARKER = ".geomemory"
@@ -101,6 +102,7 @@ class Workspace:
         migrate(self.conn, schema_sql())
 
         self.objects = ObjectStore(self.path / DEFAULT_OBJECTS_DIR)
+        self.layout = AssetLayout(self.path)
 
     # ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -445,6 +447,10 @@ class Workspace:
             dense_hits = self._dense_search(query, top_k=top_k, collections=collections)
 
         fused = rrf_fuse([sparse_hits, dense_hits], top_n=top_n)
+        # Candidate memory tiered retrieval (verified 0.8, supported 0.4, proposed 0.1)
+        candidate_hits = self._candidate_search(query, top_k=top_k)
+        if candidate_hits:
+            fused = self._merge_candidate_hits(fused, candidate_hits, top_n=top_n)
         fused = apply_hit_filters(fused, spatial=spatial, temporal=temporal, sensors=sensor)
 
         latency_ms = int((time.perf_counter() - start) * 1000)
@@ -562,6 +568,47 @@ class Workspace:
             return []
         request = SearchRequest(query=query, mode="dense", top_k=top_k, top_n=top_k)
         return backend.search(request)
+
+    def _candidate_search(self, query: str, top_k: int = 20) -> list[SearchHit]:
+        """Search candidate memories with tier weighting."""
+        try:
+            from geomemory.feedback.candidate_memory import CandidateMemoryRepository
+            from geomemory.feedback.scoring import MemoryScorer
+        except ImportError:
+            return []
+        try:
+            repo = CandidateMemoryRepository(self.conn)
+            scorer = MemoryScorer()
+            cands = repo.search(query, min_score=0)
+            hits: list[SearchHit] = []
+            for cm in cands[:top_k]:
+                weight = scorer.weight_for_state(cm.state)
+                if cm.state == "rejected":
+                    continue
+                hits.append(
+                    SearchHit(
+                        id=cm.id,
+                        score=weight,
+                        dense_score=weight,
+                        text=cm.content,
+                        metadata={"candidate_state": cm.state, "confidence": cm.confidence_score},
+                    )
+                )
+            return hits
+        except Exception:
+            return []
+
+    def _merge_candidate_hits(self, authoritative: list[SearchHit], candidates: list[SearchHit], top_n: int = 20) -> list[SearchHit]:
+        """Merge candidate hits after authoritative results with tier weights (authoritative dominates)."""
+        # authoritative weight 1.0 always higher than candidate max 0.8
+        # Append candidates after authoritative, capped.
+        merged = list(authoritative)
+        for h in candidates:
+            if len(merged) >= top_n:
+                break
+            if h.id not in {x.id for x in merged}:
+                merged.append(h)
+        return merged[:top_n]
 
     # ── QA ──────────────────────────────────────────────────────────────────
 

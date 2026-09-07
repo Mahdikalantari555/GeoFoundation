@@ -183,10 +183,17 @@ class WorkspaceSettings(GeoMemoryModel):
     st_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     onnx_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
 
-    # Vector backend selection (additive; default 'local' preserves on-disk VectorBackend).
-    vector_backend: Literal["local", "qdrant"] = "local"
+    # Vector backend selection (additive; default 'lancedb' is embedded LanceDB).
+    vector_backend: Literal["lancedb", "qdrant", "local", "numpy"] = "lancedb"
     qdrant_url: str | None = None
     qdrant_api_key: str | None = None
+
+    @field_validator("vector_backend", mode="before")
+    @classmethod
+    def _migrate_vector_backend(cls, v: str | None) -> str | None:
+        if v == "local":
+            return "lancedb"
+        return v
 
     # PDF parser selection (auto = OpenDataLoader when Java+extra present, else PyMuPDF).
     pdf_parser: Literal["auto", "opendataloader", "pymupdf"] = "auto"
@@ -561,6 +568,38 @@ class DatasetExample(GeoMemoryModel):
     dataset_card: dict[str, Any] | None = None
     created_at: str = Field(default_factory=utc_now)
     updated_at: str = Field(default_factory=utc_now)
+
+
+class CandidateMemory(GeoMemoryModel):
+    """Candidate memory with state machine and audit trail."""
+
+    id: str = Field(default_factory=lambda: new_id("cm"))
+    content: str
+    memory_type: Literal["fact", "correction", "annotation", "preference"] = "fact"
+    source_feedback_ids: list[str] = Field(default_factory=list)
+    confidence_score: float = Field(default=5.0, ge=0.0, le=20.0)
+    state: Literal["proposed", "supported", "verified", "rejected"] = "proposed"
+    author: str | None = None
+    audit_trail: list[dict[str, Any]] = Field(default_factory=list)
+    created_at: str = Field(default_factory=utc_now)
+    updated_at: str = Field(default_factory=utc_now)
+
+
+class KnowledgeChangeProposal(GeoMemoryModel):
+    """Diff-based proposal generated from verified candidate memories."""
+
+    id: str = Field(default_factory=lambda: new_id("kcp"))
+    proposal_type: Literal[
+        "graph_relation", "markdown_document", "metadata_update", "entity_create"
+    ] = "graph_relation"
+    diff: dict[str, Any] = Field(default_factory=dict)  # {original, proposed}
+    source_candidate_ids: list[str] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0.0, le=20.0)
+    status: Literal["pending", "approved", "rejected"] = "pending"
+    created_at: str = Field(default_factory=utc_now)
+    reviewed_at: str | None = None
+    reviewer_id: str | None = None
+    review_note: str | None = None
 
 
 class Job(GeoMemoryModel):
