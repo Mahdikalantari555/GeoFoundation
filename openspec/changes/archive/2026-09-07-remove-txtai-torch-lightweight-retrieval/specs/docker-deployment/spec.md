@@ -1,7 +1,7 @@
 ## Purpose
 Docker images become lightweight and CPU-only via ONNX + sqlite-vec, with measurable size/startup improvement.
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Lightweight image (no torch/txtai)
 The default `Dockerfile` SHALL build a runnable GeoFoundation stack without `torch` or `txtai` in the image layers; it SHALL include `onnxruntime`, `tokenizers`, `sqlite-vec`, and `huggingface-hub` for the `Xenova/all-MiniLM-L6-v2` quantized model.
