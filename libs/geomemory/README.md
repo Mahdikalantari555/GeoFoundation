@@ -1,172 +1,171 @@
-# GeoMemory
+# GeoMemory — lightweight, local-first geospatial memory
 
-A multimodal, spatiotemporal knowledge engine for remote sensing research.
+Local-first Python library for ingesting documents, code, GeoTIFF, and vector data into a hybrid searchable memory (FTS5 sparse + dense cosine) with citations, provenance, and geospatial filters. **No torch/txtai by default** — dense text runs on `onnxruntime` + quantized `Xenova/all-MiniLM-L6-v2` (384-d) inside SQLite via `sqlite-vec`.
 
-GeoMemory is a local-first Python library that ingests documents, code, satellite imagery, spectral features, and vector data into a unified, searchable memory — with explicit spatial, temporal, sensor, and provenance metadata.
+Highlights: offline by default, RRF hybrid, RAG with abstention, isolated embedding spaces, SHA-256 content addressing, feedback → dataset export.
 
-## Highlights
+## Architecture (v0.2 lightweight refactor)
 
-- **Local-first & offline**: everything runs on your machine. No cloud dependencies, no telemetry by default.
-- **Hybrid search**: sparse (FTS5) + dense (vector) search fused with Reciprocal Rank Fusion, with metadata/spatial/temporal filters.
-- **Grounded QA**: answers with citations into the exact source location, abstention when evidence is insufficient.
-- **Multimodal**: text, code, and (optional) satellite imagery embedding in isolated embedding spaces.
-- **Structurally-aware ingestion**: header-then-token chunking, AST-based code parsing, GeoTIFF metadata/spectral indices.
-- **Traceable provenance**: SHA-256 content-addressed storage, immutable revisions, full retrieval run logs.
-- **Feedback & evaluation**: raw feedback events → review queue → versioned dataset export (RAG eval / QA eval / SFT / preference).
+| Layer | Choice | Why |
+|---|---|---|
+| Language | Python 3.10+, Pydantic v2, SQLite WAL+FTS5+RTree | single writer, file-first backup (`cp -r workspace`) |
+| Text embeddings | **ONNX** `onnxruntime` + `tokenizers` + `huggingface_hub` → `Xenova/all-MiniLM-L6-v2` `onnx/model_quantized.onnx`, 384-d, mean-pool over `attention_mask`, L2 | CPU-only, no torch, <200 MB base |
+| Provider seam | `EmbeddingProvider` (`ONNXEmbeddingProvider` canonical, stubs `OpenAI/Voyage/Custom`) via `embeddings/factory.py:build_text_embedder` | callers depend on protocol, not inference |
+| Vector store | **sqlite-vec** `vec0` virtual table per `space_id` (`vec_text_onnx_...`), cosine; `QdrantBackend`/`LanceBackend` pluggable; `NumpyBackend` fallback | embedded, no server, backup stays with `geomemory.db` |
+| Lexical | `segments_fts` (FTS5, `unicode61 remove_diacritics`) + triggers | keyword/BM25/phrase |
+| Fusion | `retrieval/fusion.rrf_fuse` + `search_service.apply_hit_filters` (spatial/temporal/sensor) | single canonical path, `Workspace.search` reuses it |
+| QA | `LLMBackend` protocol (`LlamaCppBackend` + `ApiLLMBackend`) | grounded answers with citations + abstention |
+| Vision | `OlmoEarthVisionEmbedder` behind opt-in `[vision]` (`torch`) | image path stays torch-free unless opted in |
+
+Embedding spaces isolated: `text.*` vs vision; `text.onnx.<safe>.v1` per model, never mixed.
 
 ## Installation
 
-```bash
-pip install -e ".[dev]"
-```
-
-Optional dependency groups:
+Base install is torch-free:
 
 ```bash
-pip install -e ".[ai]"      # txtai + llama-cpp-python (retrieval/inference stack)
-pip install -e ".[st]"      # sentence-transformers (dense text embeddings)
-pip install -e ".[vector]"  # qdrant-client (server-mode vector backend)
-pip install -e ".[docs]"    # PDF/DOCX parsing
-pip install -e ".[rs]"      # rasterio/shapely/geopandas (remote sensing)
-pip install -e ".[ui]"      # Streamlit reference app
+# conda env geospatial (preferred)
+conda run -n geospatial uv pip install -e libs/geomemory
+# or
+pip install geomemory
+# pipdeptree | grep -qi torch → no matches (CI gate)
 ```
 
-## Settings
+Optional groups:
 
-Workspace settings are persisted in `workspace.yaml` and can be overridden via environment variables:
+```bash
+pip install -e ".[docs]"          # pymupdf, python-docx
+pip install -e ".[rs]"            # rasterio, shapely, geopandas, Pillow
+pip install -e ".[vector]"        # qdrant-client (server)
+pip install -e ".[lancedb]"       # pylancedb (embedded LanceDB)
+pip install -e ".[vision]"        # torch + olmoearth-pretrain (ONLY torch entry)
+pip install -e ".[llamacpp]"      # llama-cpp-python (GGUF offline)
+pip install -e ".[onnx]"          # alias — onnxruntime/tokenizers/sqlite-vec already in base
+pip install -e ".[ui]"            # streamlit dashboard (legacy, optional — prefer gateway+web)
+pip install -e ".[dev]"           # pytest/mypy/ruff
+```
+
+Base deps: `pydantic, numpy, click, PyYAML, onnxruntime>=1.18, tokenizers>=0.15, huggingface-hub>=0.23, sqlite-vec>=0.1.6`. No `txtai/torch/sentence-transformers/accelerate/safetensors`.
+
+## Settings & env overrides
+
+`workspace.yaml` persisted via `WorkspaceSettings` (`core/models.py`); env vars override:
 
 | Variable | Setting | Default |
 |---|---|---|
-| `GEOMEMORY_QDRANT_URL` | `qdrant_url` | (unset = local backend) |
-| `GEOMEMORY_ST_MODEL` | `st_model_name` | `sentence-transformers/all-MiniLM-L6-v2` |
-| `GEOMEMORY_EMBEDDING_BACKEND` | `embedding_backend` | `hashing` |
-| `GEOMEMORY_VECTOR_BACKEND` | `vector_backend` | `local` |
+| `GEOMEMORY_EMBEDDING_PROVIDER` | `embedding_provider` (`onnx/openai/voyage/custom/hashing/llama-cpp`) | `onnx` |
+| `GEOMEMORY_EMBEDDING_BACKEND` | `embedding_backend` (deprecated alias) | `hashing` |
+| `GEOMEMORY_ONNX_MODEL` | `onnx_model_name` | `Xenova/all-MiniLM-L6-v2` |
+| `GEOMEMORY_EMBEDDING_ROOT` | `embedding_path` (hub root) | `~/.cache/huggingface` via `EmbeddingModelHub` scan (`/mnt/data/LocalAI/Models/Embedding` → `workspace/indexes`) |
+| `GEOMEMORY_VECTOR_BACKEND` | `vector_backend` (`sqlite-vec/lancedb/qdrant/numpy`) | `sqlite-vec` |
+| `GEOMEMORY_QDRANT_URL` | `qdrant_url` | (unset) |
+| `GEOMEMORY_ST_MODEL` | `st_model_name` (deprecated, mapped to Xenova) | `sentence-transformers/all-MiniLM-L6-v2` |
+| `GEOMEMORY_VISION_PATH` | `vision_path` | (unset) |
+| `GEOMEMORY_LLM_*` | `llm_provider/base_url/key_env/model_id/context_window` | `kilo-auto/free`, 32768 |
 
-## Docker
-
-A multi-stage `Dockerfile` and `docker-compose.yml` package GeoMemory with Qdrant:
-
-- **CLI target** — installs the package plus AI/vector extras; entrypoint `geomemory`.
-- **UI target** — adds Streamlit and serves the reference app on port 8501.
-
-```bash
-docker build --target cli -t geomemory:cli .
-docker compose up
-```
-
-The compose stack starts Qdrant (named volume) and the UI, pre-wired so the app connects to Qdrant by service name. Volumes:
-
-- `qdrant_storage` — Qdrant data (survives recreation).
-- `workspace_data` — GeoMemory workspace.
-- `hf_cache` — Hugging Face model cache (avoids re-downloading the embedding model).
+Offline: `offline=true` refuses network downloads (hub `EmbeddingUnavailableError` → `503 embedding_unavailable`).
 
 ## Quickstart
 
 ```python
 from geomemory import GeoMemory
 
-memory = GeoMemory.open("./workspace")
+ws = GeoMemory.create("./workspace", name="demo")
+col = ws.create_collection("papers", "RS papers")
+ws.ingest("paper.pdf", collection_id=col.id)
 
-collection = memory.create_collection("papers", "Remote sensing papers")
-job = memory.ingest("paper.pdf", collection_id=collection.id)
-memory.build_index("text.nomic.v1")
+# Dense index via ONNX sqlite-vec (auto-downloads Xenova quantized on first use when offline=false)
+ws.build_index("text.onnx.Xenova-all-MiniLM-L6-v2.v1")
+# Or wrapper: ws.rebuild_index(space_id) / build_index handles hashing/onnx via provider
+results = ws.search("crop stress with NDVI", mode="hybrid", top_k=5)
+print(results.hits[0].text, results.hits[0].score)
 
-results = memory.search("crop stress detection with vegetation indices")
-answer = memory.ask("What vegetation indices detect crop stress?")
-print(answer.text)
-for citation in answer.citations:
-    print(citation.locator)
+answer = ws.ask("What indices detect crop stress?")
+print(answer.text, answer.citations[0].locator if answer.citations else "abstained")
+
+# CLI
+# geomemory init ./workspace
+# geomemory ingest paper.pdf --collection papers
+# geomemory index build --space text.onnx.Xenova-all-MiniLM-L6-v2.v1
+# geomemory search "crop stress"
+# geomemory reindex --workspace ./workspace --model Xenova/all-MiniLM-L6-v2
+# geomemory doctor --workspace ./workspace
 ```
 
-### Remote sensing (raster / vector, Phase 2)
-
+Raster/vector filtering (requires `[rs]`):
 ```python
-from geomemory import GeoMemory
 from geomemory.core.models import SpatialFilter, TemporalFilter
-
-memory = GeoMemory.open("./workspace")
-col = memory.create_collection("imagery", "Satellite imagery and vector layers")
-
-# Ingest a GeoTIFF scene and a GeoJSON vector layer (requires `.[rs]`).
-memory.ingest("scene.tif", collection_id=col.id)
-memory.ingest("fields.geojson", collection_id=col.id)
-
-# Filter by location (EPSG:4326 lon/lat bbox), acquisition window, or sensor.
-results = memory.search(
-    "Sentinel-2 flood extent",
-    spatial=SpatialFilter(bbox=(51.0, 35.0, 52.0, 36.0)),
+results = ws.search(
+    "Sentinel-2 flood",
+    spatial=SpatialFilter(bbox=(51,35,52,36)),
     temporal=TemporalFilter(field="acquired_at", from_="2024-01-01", to="2024-12-31"),
     sensor=["Sentinel-2"],
 )
-
-# Spectral indices are pure numpy and testable without rasterio.
-from geomemory.rs.raster.spectral import ndvi
-# ndvi_result = ndvi(nir_array, red_array)   # (NIR - RED) / (NIR + RED)
-
-# Experimental image search over vision-embedded tiles (needs OLMoEarth GGUF).
-# index.save(memory.index_dir / "image", manifest)
-# hits = memory.search_images(query_vector)
 ```
 
-Spatial/temporal/sensor filters work offline in `memory.search()`; GeoTIFF/GeoJSON ingestion and spectral computations require the optional `.[rs]` dependencies (rasterio, shapely, geopandas, Pillow).
+## Storage layout
+
+```
+workspace/
+  geomemory.db          # WAL, FTS5, RTree, sqlite-vec vec_* tables, manifests
+  workspace.yaml        # WorkspaceSettings
+  indexes/<space_id>/manifest.json  # space_id, model_id, dimension=384, checksum
+  objects/<sha256>      # content-addressed blobs
+  assets/{documents,code,imagery,vectors}
+```
+
+## Provider & retrieval
+
+- `ONNXEmbeddingProvider` (`embeddings/provider.py`) wraps `OnnxTextEmbedder` (tokenizer.json + `onnx/model_quantized.onnx` preferred, fallback `onnx/model.onnx` etc., `CPUExecutionProvider`, mean-pool, L2, e5 prefix `query:/passage:`).
+- `SqliteVecBackend` (`index/sqlite_vec_backend.py`) — per-space `vec_<safe>` (`embedding float[384] distance_metric=cosine` + `id TEXT PRIMARY KEY, chunk_text, metadata`), `serialize_float32`, `MATCH ? AND k=? ORDER BY distance`, score `1-distance`.
+- `LanceBackend`/`QdrantBackend` behind `StorageBackend` protocol; no caller imports `lancedb/qdrant_client` outside `index/`.
+
+## Migration from txtai/ST
+
+```bash
+pip uninstall -y txtai torch sentence-transformers  # or fresh venv
+pip install geomemory              # base no longer pulls them
+# Optional: pip install "geomemory[vision]" only if you need OLMoEarth
+geomemory reindex --workspace ./workspace --provider onnx --model Xenova/all-MiniLM-L6-v2
+# or: geomemory index reindex -w ./workspace --provider onnx
+pipdeptree | grep -qi torch && echo "still have torch!" || echo "clean"
+```
+
+Manifests with `space_id=text.st.*` / `text.txtai.*` now warn `ReindexRequired`.
 
 ## CLI
 
 ```
 geomemory init PATH
-geomemory doctor [--workspace PATH]      # environment + workspace diagnostics
 geomemory ingest SOURCE --collection NAME
-geomemory index build --space SPACE_ID
-geomemory search QUERY [--format table|json|markdown]
+geomemory index build --space SPACE_ID     # dense build
+geomemory index rebuild --space SPACE_ID
+geomemory index reindex -w WS --provider onnx --model Xenova/all-MiniLM-L6-v2
+geomemory reindex -w WS --provider onnx    # top-level alias
+geomemory search QUERY [--mode hybrid|sparse|dense]
 geomemory ask QUESTION
-geomemory chat
-geomemory app
-geomemory inspect ASSET_ID
-geomemory eval run BENCHMARK_PATH
-geomemory feedback export --type TYPE
+geomemory chat / app (legacy) / inspect / eval / feedback / doctor
 ```
 
-## Dashboard
-
-A Streamlit reference app consuming only the public `GeoMemory` API:
+## Testing & quality gates
 
 ```bash
-streamlit run apps/dashboard/app.py
+conda run -n geospatial pytest libs/geomemory/tests -q  # 345 passed, 9 skipped svc gates
+conda run -n geospatial pytest libs/geomemory/tests/unit/test_provider.py libs/geomemory/tests/unit/test_sqlite_vec_backend.py -v
+conda run -n geospatial python -c "import geomemory; assert 'torch' not in str(__import__('importlib.metadata').metadata('geomemory').get_all('Requires-Dist'))"
+conda run -n geospatial pipdeptree | grep -qi torch && exit 1 || echo "no torch"
+ruff check libs/geomemory/src
+mypy --strict libs/geomemory/src  # pre-existing 81 legacy errors allowed (AGENTS.md)
 ```
 
-The sidebar opens or creates a workspace (path from `GEOMEMORY_DASHBOARD_ROOT` or `./workspace`). Pages: overview, search, ask, assets, ingest, feedback, evaluation, settings.
+`scripts/check_no_torch_dep.py` enforces the graph in CI.
 
-## Development
+## Docs & spec
 
-```bash
-pytest tests/
-pytest --cov=geomemory --cov-report=term-missing
-mypy --strict src/geomemory
-ruff check src/ tests/
-```
+- `openspec/` — authoritative specs + changes (`remove-txtai-torch-lightweight-retrieval` is the lightweight refactor).
+- `docs/current-state/` — generated audit; `openspec/specs/` — as-is capability specs.
+- Change workflow: `proposal → apply → archive`.
 
 ## License
 
-MIT
-
-## Project Status
-
-GeoMemory is in **alpha**. APIs may change between releases.
-
-## Contributing
-
-This project follows a spec-driven workflow. Requirements and changes are managed via the `openspec` CLI (`/opsx:propose`, `/opsx:apply`, `/opsx:archive`).
-
-1. Propose a change with `/opsx:propose` (creates proposal + specs + design + tasks).
-2. Implement the approved change with `/opsx:apply`.
-3. Finalize and archive with `/opsx:archive`.
-
-Development setup:
-
-```bash
-conda activate ai
-pip install -e ".[dev,ai,docs,rs,ui]"
-pytest tests/
-mypy --strict src/geomemory
-ruff check src/ tests/
-```
+MIT — alpha `0.1.0`, APIs may still change.

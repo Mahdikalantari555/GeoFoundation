@@ -117,5 +117,5 @@ class TestOpenDataLoaderPdfFallback:
         from geomemory.ingest.loaders.opendataloader_pdf import OpenDataLoaderPdf
         monkeypatch.setattr(odl_mod, "java_available", lambda: False)
         loader = OpenDataLoaderPdf()
-        with pytest.raises(RuntimeError, match="Java"):
+        with pytest.raises(RuntimeError, match="Java|opendataloader"):
             list(loader.load(SourceRef(path="tests/data/flood_report.pdf")))

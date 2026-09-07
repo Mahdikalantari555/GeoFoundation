@@ -1,4 +1,4 @@
-"""Retrieval backends: protocol, txtai implementation, numpy fallback, image index."""
+"""Retrieval backends: protocol, numpy fallback, sqlite-vec, image index."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from geomemory.index.manifest import (
 )
 from geomemory.index.numpy_backend import NumpyBackend
 from geomemory.index.qdrant_backend import QdrantBackend
+from geomemory.index.sqlite_vec_backend import SqliteVecBackend
 from geomemory.index.storage_backend import StorageBackend
-from geomemory.index.txtai_backend import TxtaiBackend
 from geomemory.index.vector_backend import VectorBackend
 
 __all__ = [
@@ -23,8 +23,8 @@ __all__ = [
     "NumpyBackend",
     "QdrantBackend",
     "RetrievalBackend",
+    "SqliteVecBackend",
     "StorageBackend",
-    "TxtaiBackend",
     "VectorBackend",
     "create_manifest",
     "load_manifest",

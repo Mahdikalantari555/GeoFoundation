@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 
 def json_report(name: str, metrics: dict[str, dict[str, float]]) -> str:

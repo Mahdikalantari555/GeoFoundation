@@ -7,7 +7,11 @@ import socket
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import sync_playwright
+
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None  # type: ignore[assignment]
 
 DASHBOARD_URL = os.environ.get("GEOMEMORY_DASH_URL", "http://localhost:8501")
 WORKSPACE_ROOT = os.environ.get("GEOMEMORY_TEST_WS", "/tmp/geomemory_dashboard_ws")
@@ -44,6 +48,10 @@ def _dashboard_available() -> bool:
 
 
 pytestmark = [
+    pytest.mark.skipif(
+        sync_playwright is None,
+        reason="playwright not installed; skipping e2e dashboard test",
+    ),
     pytest.mark.skipif(
         BRAVE_PATH is None,
         reason="no local chromium/brave browser executable found; skipping e2e dashboard test",

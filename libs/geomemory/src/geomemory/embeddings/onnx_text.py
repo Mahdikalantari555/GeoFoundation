@@ -123,14 +123,14 @@ class OnnxTextEmbedder:
                 "packages. Install with `pip install geomemory[onnx]`."
             ) from exc
         model_dir = self._ensure_downloaded(self._resolve_dir())
-        # Prefer full precision, fall back to quantized (Xenova default is
-        # onnx/model_quantized.onnx).
+        # Prefer quantized (Xenova default is onnx/model_quantized.onnx) then
+        # full precision fallback.
         onnx_file = None
         for candidate in (
-            model_dir / "model.onnx",
-            model_dir / "onnx" / "model.onnx",
             model_dir / "onnx" / "model_quantized.onnx",
             model_dir / "model_quantized.onnx",
+            model_dir / "onnx" / "model.onnx",
+            model_dir / "model.onnx",
         ):
             if candidate.is_file():
                 onnx_file = candidate

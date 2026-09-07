@@ -1,10 +1,11 @@
 """IndexService — builds and maintains persisted retrieval indexes.
 
-The service embeds workspace segments (via a configured GGUF embedder or the
-offline :class:`HashingTextEmbedder`), persists ``EmbeddingRecord`` rows in
-SQLite, and writes a :class:`VectorBackend` + ``IndexManifest`` under
-``index_dir/<space_id>``. Dense search then loads the persisted backend
-instead of rebuilding vectors on every call.
+The service embeds workspace segments via the configured :class:`EmbeddingProvider`
+(canonical ONNX quantized ``Xenova/all-MiniLM-L6-v2``, 384-d), persists
+``EmbeddingRecord`` rows in SQLite, and writes vectors into the configured
+``VectorBackend`` (default ``sqlite-vec`` virtual table, optional LanceDB /
+Qdrant, fallback numpy). Dense search then loads the persisted backend plus
+FTS5.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ import shutil
 import sqlite3
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 
@@ -31,10 +32,6 @@ from geomemory.index.manifest import create_manifest, load_manifest, write_manif
 from geomemory.index.storage_backend import StorageBackend
 from geomemory.index.vector_backend import VectorBackend
 from geomemory.storage.repositories.embedding_repo import EmbeddingRepository
-
-if TYPE_CHECKING:
-    from geomemory.embeddings.sentence_transformer import SentenceTransformerEmbedder
-    from geomemory.index.qdrant_backend import QdrantBackend
 
 
 class IndexService:
@@ -75,6 +72,22 @@ class IndexService:
             repo.delete_by_space(space_id)
             if backend_dir.exists():
                 shutil.rmtree(backend_dir)
+            # For sqlite-vec, also rebuild the virtual table
+            try:
+                backend = self._storage_backend(space_id)
+                from geomemory.index.sqlite_vec_backend import SqliteVecBackend
+
+                if isinstance(backend, SqliteVecBackend):
+                    backend.rebuild(
+                        create_manifest(
+                            space_id=space_id,
+                            model_id=embedder.model_id,
+                            dimension=getattr(embedder, "dimension", 384),
+                            doc_count=0,
+                        )
+                    )
+            except Exception:
+                pass
 
         segments = self._load_segments()
         existing = {r.target_id for r in repo.get_by_space(space_id)}
@@ -113,13 +126,37 @@ class IndexService:
 
         backend = self._storage_backend(space_id)
         if records:
-            backend.upsert(records, embeddings=np.stack(vectors))
-        backend.save(backend_dir)
+            # sqlite-vec expects vec0 table; lancedb/vector expect matrix
+            try:
+                backend.upsert(records, embeddings=np.stack(vectors))
+            except TypeError:
+                # Some backends declare upsert(records) without embeddings kw
+                backend.upsert(records)  # type: ignore[call-arg]
+        # Persist filesystem side (manifest + fallback files for non-sqlite backends)
+        try:
+            backend.save(backend_dir)
+        except Exception:
+            backend_dir.mkdir(parents=True, exist_ok=True)
 
+        # Detect legacy ST space_ids: warn ReindexRequired
+        if space_id.startswith("text.st.") or space_id.startswith("text.txtai"):
+            warnings.warn(
+                f"legacy space_id '{space_id}' detected — rebuild with ONNX provider "
+                f"(Xenova/all-MiniLM-L6-v2) via `geomemory reindex` for sqlite-vec parity.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        dim = getattr(embedder, "dimension", None)
+        if dim is None:
+            try:
+                dim = int(embedder.embed(["x"]).shape[1])
+            except Exception:
+                dim = 384
         manifest = create_manifest(
             space_id=space_id,
             model_id=embedder.model_id,
-            dimension=embedder.embed(["x"]).shape[1],
+            dimension=int(dim),
             doc_count=backend.count(),
         )
         write_manifest(backend_dir, manifest)
@@ -161,28 +198,64 @@ class IndexService:
         if use_qdrant:
             assert settings is not None
             backend = self._qdrant_backend(space_id)
-            from geomemory.embeddings.sentence_transformer import (
-                SentenceTransformerEmbedder,
-            )
-
-            st_embedder = SentenceTransformerEmbedder(settings.st_model_name)
-            query_vec = st_embedder.embed_query([query])[0]
+            # Qdrant uses the canonical ONNX provider for the query
+            embedder = self._embedder(model_path)
+            try:
+                qv = embedder.embed_query([query])[0]
+            except AttributeError:
+                qv = embedder.embed([query])[0]
             request = SearchRequest(
                 query=query,
-                query_embedding=query_vec,
+                query_embedding=qv,
                 mode="dense",
                 top_k=top_k,
                 top_n=top_k,
             )
             return backend.search(request)
 
-        backend_dir = self.index_dir / space_id
         backend = self._storage_backend(space_id)
+        # sqlite-vec keeps data in DB — no filesystem existence gate
+        from geomemory.index.sqlite_vec_backend import SqliteVecBackend
+
+        if isinstance(backend, SqliteVecBackend):
+            if backend.count() == 0:
+                return []
+            embedder = self._embedder(model_path)
+            try:
+                manifest = load_manifest(self.index_dir / space_id)
+                if manifest.model_id != embedder.model_id:
+                    warnings.warn(
+                        f"embedding model mismatch: index built with '{manifest.model_id}' "
+                        f"but querying with '{embedder.model_id}'. Rebuild required for reliable results.",
+                        stacklevel=2,
+                    )
+                if manifest.space_id != embedder.space_id and manifest.space_id.startswith("text.st."):
+                    warnings.warn(
+                        f"legacy space_id '{manifest.space_id}' vs provider '{embedder.space_id}' — "
+                        f"run `geomemory reindex` to migrate to ONNX sqlite-vec.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+            except Exception:
+                pass
+            try:
+                qv = embedder.embed_query([query])[0]
+            except AttributeError:
+                qv = embedder.embed([query])[0]
+            request = SearchRequest(
+                query=query,
+                query_embedding=qv,
+                mode="dense",
+                top_k=top_k,
+                top_n=top_k,
+            )
+            return backend.search(request)
+
+        # Legacy file-based backends (lancedb / vector)
+        backend_dir = self.index_dir / space_id
         if not backend.exists(backend_dir):
             return []
-        # Load persisted backend
         try:
-            # LanceBackend and VectorBackend have compatible load signatures
             loaded = type(backend).load(backend_dir, space_id=space_id)  # type: ignore[attr-defined]
             backend = loaded
         except Exception:
@@ -198,10 +271,13 @@ class IndexService:
                 )
         except Exception:
             pass
-        query_vec = embedder.embed([query])[0]
+        try:
+            qv = embedder.embed_query([query])[0]
+        except AttributeError:
+            qv = embedder.embed([query])[0]
         request = SearchRequest(
             query=query,
-            query_embedding=query_vec,
+            query_embedding=qv,
             mode="dense",
             top_k=top_k,
             top_n=top_k,
@@ -210,66 +286,45 @@ class IndexService:
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
-    def _embedder(
-        self, model_path: str | None
-    ) -> HashingTextEmbedder | LlamaCppTextEmbedder | Any:
-        """Return the configured embedder based on workspace settings.
-
-        Dispatch order when ``self._settings`` is available:
-          - ``sentence-transformers``: lazy-imported ST embedder.
-          - ``onnx``: CPU-friendly ONNX embedder (Xenova quantized default).
-          - ``llama-cpp`` / fallback when ``model_path`` is set: GGUF embedder.
-          - ``hashing`` / fallback: offline hashing embedder.
-        Falls back to the legacy (model_path ? llama-cpp : hashing) behavior when
-        no settings were supplied.
-        """
+    def _embedder(self, model_path: str | None) -> Any:
+        """Return the configured embedder/provider based on workspace settings."""
         settings = self._settings
         if settings is not None:
-            if settings.embedding_backend == "sentence-transformers":
-                return self._sentence_transformer_embedder(settings)
-            if settings.embedding_backend == "onnx":
-                return self._onnx_embedder(settings)
-            if settings.embedding_backend == "llama-cpp":
-                if model_path:
-                    return LlamaCppTextEmbedder(model_path)
+            # Model-path override for llama-cpp (legacy path used by tests)
+            if getattr(settings, "embedding_backend", None) == "llama-cpp" and model_path:
+                return LlamaCppTextEmbedder(model_path)
+            if getattr(settings, "embedding_provider", None) == "llama-cpp" and model_path:
+                return LlamaCppTextEmbedder(model_path)
+            # Prefer the new factory which handles provider + deprecation
+            try:
+                from geomemory.embeddings.factory import build_text_embedder
+
+                return build_text_embedder(settings)
+            except Exception:
+                pass
+            # Fallback inline
+            provider = getattr(settings, "embedding_provider", None)
+            if provider is None:
+                # Map legacy backend
+                if settings.embedding_backend == "onnx":
+                    from geomemory.embeddings.provider import ONNXEmbeddingProvider
+
+                    return ONNXEmbeddingProvider(settings.onnx_model_name, offline=settings.offline)
+                if settings.embedding_backend == "llama-cpp":
+                    if model_path:
+                        return LlamaCppTextEmbedder(model_path)
+                    return HashingTextEmbedder()
                 return HashingTextEmbedder()
-            # hashing: offline default
+            if provider == "onnx":
+                from geomemory.embeddings.provider import ONNXEmbeddingProvider
+
+                return ONNXEmbeddingProvider(settings.onnx_model_name, offline=settings.offline)
             return HashingTextEmbedder()
-        # Legacy fallback.
         if model_path:
             return LlamaCppTextEmbedder(model_path)
         return HashingTextEmbedder()
 
-    def _sentence_transformer_embedder(
-        self, settings: WorkspaceSettings
-    ) -> SentenceTransformerEmbedder:
-        """Lazily import and construct the sentence-transformers embedder."""
-        try:
-            from geomemory.embeddings.sentence_transformer import (
-                SentenceTransformerEmbedder,
-            )
-        except ImportError as exc:
-            raise ImportError(
-                "The sentence-transformers backend requires the optional "
-                "`sentence-transformers` package. Install it with "
-                "`pip install geomemory[st]`."
-            ) from exc
-        return SentenceTransformerEmbedder(
-            settings.st_model_name, offline=settings.offline
-        )
-
-    def _onnx_embedder(self, settings: WorkspaceSettings) -> Any:
-        """Lazily import and construct the ONNX embedder."""
-        try:
-            from geomemory.embeddings.onnx_text import OnnxTextEmbedder
-        except ImportError as exc:
-            raise ImportError(
-                "The onnx backend requires the optional `onnxruntime` + "
-                "`tokenizers` packages. Install with `pip install geomemory[onnx]`."
-            ) from exc
-        return OnnxTextEmbedder(settings.onnx_model_name, offline=settings.offline)
-
-    def _qdrant_backend(self, space_id: str) -> QdrantBackend:
+    def _qdrant_backend(self, space_id: str):  # type: ignore[no-untyped-def]
         """Lazily import and construct the Qdrant backend for a space."""
         try:
             from geomemory.index.qdrant_backend import QdrantBackend
@@ -288,17 +343,33 @@ class IndexService:
     def _storage_backend(self, space_id: str) -> StorageBackend:
         """Factory dispatch based on settings.vector_backend."""
         settings = self._settings
-        backend_name = getattr(settings, "vector_backend", "lancedb") if settings else "lancedb"
+        backend_name = getattr(settings, "vector_backend", "sqlite-vec") if settings else "sqlite-vec"
         if backend_name == "qdrant":
             return self._qdrant_backend(space_id)  # type: ignore[return-value]
+        if backend_name == "sqlite-vec":
+            try:
+                from geomemory.index.sqlite_vec_backend import SqliteVecBackend
+
+                # Dimension inferred on first upsert (hashing 256 vs onnx 384)
+                return SqliteVecBackend(conn=self.conn, space_id=space_id)  # type: ignore[return-value]
+            except Exception:
+                return VectorBackend(space_id=space_id)  # type: ignore[return-value]
         if backend_name in ("local", "numpy"):
             return VectorBackend(space_id=space_id)  # type: ignore[return-value]
-        # default lancedb
-        try:
-            from geomemory.index.lance_backend import LanceBackend
+        # lancedb explicit
+        if backend_name == "lancedb":
+            try:
+                from geomemory.index.lance_backend import LanceBackend
 
-            return LanceBackend(space_id=space_id)  # type: ignore[return-value]
-        except ImportError:
+                return LanceBackend(space_id=space_id)  # type: ignore[return-value]
+            except ImportError:
+                return VectorBackend(space_id=space_id)  # type: ignore[return-value]
+        # default: sqlite-vec with fallback
+        try:
+            from geomemory.index.sqlite_vec_backend import SqliteVecBackend
+
+            return SqliteVecBackend(conn=self.conn, space_id=space_id)  # type: ignore[return-value]
+        except Exception:
             return VectorBackend(space_id=space_id)  # type: ignore[return-value]
 
     def _load_segments(self) -> list[dict[str, Any]]:

@@ -18,12 +18,20 @@ import click
     help="Workspace path (default: GEOMEMORY_DASHBOARD_ROOT or ./workspace)",
 )
 def app(workspace: str | None) -> None:
-    """Launch the Streamlit reference dashboard."""
+    """Launch the Streamlit reference dashboard (legacy — prefer GeoFoundation gateway + web SPA)."""
+    import warnings
+
+    warnings.warn(
+        "geomemory app (Streamlit) is legacy and optional — prefer the GeoFoundation gateway (server) + web SPA. "
+        "Keep [ui] only if you need the old standalone dashboard.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         from streamlit.web import cli as stcli
     except ImportError as err:
         raise click.ClickException(
-            "streamlit is not installed. Install it with: pip install 'geomemory[ui]'"
+            "streamlit is not installed. Install it with: pip install 'geomemory[ui]' (legacy optional)"
         ) from err
 
     app_path = Path(__file__).resolve().parents[3] / "apps" / "dashboard" / "app.py"

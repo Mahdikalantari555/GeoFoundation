@@ -10,7 +10,12 @@ from pydantic import Field
 
 from geomemory.core.exceptions import VectorBackendUnavailableError
 from geomemory.core.models import GeoMemoryModel
-from geomemory.rs.raster.metadata import bbox_from_bounds, footprint_wkb_hex, format_bbox, validate_bbox
+from geomemory.rs.raster.metadata import (
+    bbox_from_bounds,
+    footprint_wkb_hex,
+    format_bbox,
+    validate_bbox,
+)
 
 _VALID_GEOMETRIES = (
     "Point",

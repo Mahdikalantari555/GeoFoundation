@@ -134,14 +134,18 @@ class TestIndexService:
         assert all(r.space_id == "text.hash.v1" for r in records)
         assert all(r.target_type == "segment" for r in records)
 
-        # Manifest + backend persisted on disk.
+        # Manifest + backend persisted (sqlite-vec preferred, VectorBackend fallback).
         backend_dir = ws.index_dir / "text.hash.v1"
         assert manifest_exists(backend_dir)
         manifest = load_manifest(backend_dir)
         assert manifest.space_id == "text.hash.v1"
         assert manifest.model_id == "hashing-ngram-v1"
         assert manifest.doc_count == summary["indexed"]
-        assert VectorBackend.exists(backend_dir)
+        # Either legacy VectorBackend files or sqlite-vec virtual table persisted
+        from geomemory.index.sqlite_vec_backend import SqliteVecBackend
+
+        vec_exists = SqliteVecBackend(conn=ws.conn, space_id="text.hash.v1").count() > 0
+        assert VectorBackend.exists(backend_dir) or vec_exists
 
     def test_build_is_incremental(self, temp_workspace, sample_markdown):
         ws = temp_workspace

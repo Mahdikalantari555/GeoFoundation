@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from geomemory.core.models import CandidateMemory, utc_now
+from geomemory.core.models import CandidateMemory
 from geomemory.feedback.candidate_memory import CandidateMemoryRepository
 from geomemory.feedback.proposals import ProposalEngine
 from geomemory.feedback.scoring import MemoryScorer

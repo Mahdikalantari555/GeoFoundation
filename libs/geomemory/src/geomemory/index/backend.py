@@ -10,8 +10,8 @@ from geomemory.core.models import IndexManifest, IndexRecord, SearchHit, SearchR
 class RetrievalBackend(Protocol):
     """Protocol for pluggable retrieval backends.
 
-    Implementations wrap vector index engines (e.g. txtai) or fallback
-    implementations (e.g. numpy cosine similarity).
+    Implementations wrap vector index engines (e.g. sqlite-vec, LanceDB, Qdrant)
+    or fallback implementations (e.g. numpy cosine similarity).
     """
 
     space_id: str

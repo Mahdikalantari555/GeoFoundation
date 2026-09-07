@@ -16,8 +16,10 @@ ENV_OVERRIDES: dict[str, str] = {
     "GEOMEMORY_ST_MODEL": "st_model_name",
     "GEOMEMORY_ONNX_MODEL": "onnx_model_name",
     "GEOMEMORY_EMBEDDING_BACKEND": "embedding_backend",
+    "GEOMEMORY_EMBEDDING_PROVIDER": "embedding_provider",
     "GEOMEMORY_VECTOR_BACKEND": "vector_backend",
     "GEOMEMORY_VISION_PATH": "vision_path",
+    "GEOMEMORY_EMBEDDING_ROOT": "embedding_path",
 }
 
 

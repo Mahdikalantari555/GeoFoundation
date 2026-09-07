@@ -25,6 +25,7 @@ def _import_commands() -> None:
         ingest,
         init,
         inspect,
+        reindex,
         search,
     )
 
@@ -37,6 +38,7 @@ def _import_commands() -> None:
     cli.add_command(eval_cmd.eval_cmd)
     cli.add_command(feedback.feedback)
     cli.add_command(doctor.doctor)
+    cli.add_command(reindex.reindex)
     cli.add_command(app.app)
 
 

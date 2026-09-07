@@ -16,10 +16,7 @@ from typing import Any
 from geomemory.core.models import WorkspaceSettings
 
 OPTIONAL_DEPS: list[tuple[str, str, str]] = [
-    ("txtai", "txtai", "dense/sparse retrieval backend"),
     ("llama_cpp_python", "llama_cpp", "local GGUF LLM + embedding inference"),
-    ("sentence_transformers", "sentence_transformers",
-     "sentence-transformers dense text embeddings"),
     ("qdrant_client", "qdrant_client", "Qdrant server-mode vector backend"),
     ("rasterio", "rasterio", "GeoTIFF reading"),
     ("shapely", "shapely", "geometry operations"),
@@ -29,10 +26,11 @@ OPTIONAL_DEPS: list[tuple[str, str, str]] = [
     ("opendataloader_pdf", "opendataloader-pdf", "high-quality PDF parsing (optional)"),
     ("docx", "python-docx", "DOCX parsing"),
     ("streamlit", "streamlit", "reference dashboard"),
-    ("torch", "torch", "OLMoEarth vision embeddings"),
-    ("onnxruntime", "onnxruntime", "ONNX dense text embeddings (CPU)"),
-    ("tokenizers", "tokenizers", "ONNX tokenizer backend"),
-    ("huggingface_hub", "huggingface_hub", "embedding model download hub"),
+    ("torch", "torch", "OLMoEarth vision embeddings (opt-in [vision])"),
+    ("onnxruntime", "onnxruntime", "ONNX dense text embeddings (CPU) — canonical"),
+    ("tokenizers", "tokenizers", "ONNX tokenizer backend — canonical"),
+    ("huggingface_hub", "huggingface_hub", "embedding model download hub — canonical"),
+    ("sqlite_vec", "sqlite_vec", "sqlite-vec dense vector storage — canonical"),
 ]
 
 CORE_DEPS: list[tuple[str, str]] = [
@@ -216,30 +214,59 @@ def doctor_vision(settings: WorkspaceSettings) -> dict[str, Any]:
 
 
 def doctor_embedding(settings: WorkspaceSettings) -> dict[str, Any]:
-    """Report embedding hub inventory + resolved active model/space."""
+    """Report embedding hub inventory + resolved active model/space and sqlite-vec."""
     try:
         from geomemory.embeddings.hub import EmbeddingModelHub
 
         hub = EmbeddingModelHub(embedding_path=settings.embedding_path)
-        active_model = (
-            settings.onnx_model_name
-            if settings.embedding_backend == "onnx"
-            else settings.st_model_name
-            if settings.embedding_backend == "sentence-transformers"
-            else None
-        )
-        return hub.summary(
-            active_backend=settings.embedding_backend, active_model=active_model
-        )
+        # Prefer new provider field, fall back to deprecated backend
+        provider = getattr(settings, "embedding_provider", None) or settings.embedding_backend
+        # Map legacy ST backend to onnx for display
+        if provider == "sentence-transformers":
+            provider = "onnx"
+        active_model = settings.onnx_model_name if provider in ("onnx", "sentence-transformers", None) else None
+        base = hub.summary(active_backend=provider, active_model=active_model)
     except Exception as exc:  # noqa: BLE001 - scan is best-effort
-        return {
+        base = {
             "hub_count": 0,
             "downloaded": 0,
-            "active_backend": settings.embedding_backend,
+            "active_backend": getattr(settings, "embedding_provider", None) or settings.embedding_backend,
             "active_model": None,
             "active_space_id": None,
             "error": str(exc),
         }
+    # Add sqlite-vec status
+    try:
+        import sqlite_vec  # type: ignore[import-not-found]
+
+        vec_installed = True
+        vec_version = getattr(sqlite_vec, "__version__", "unknown")
+    except ImportError:
+        vec_installed = False
+        vec_version = None
+    vec_loadable = False
+    if vec_installed:
+        try:
+            import sqlite3
+
+            c = sqlite3.connect(":memory:")
+            c.enable_load_extension(True)
+            import sqlite_vec as _sv
+
+            _sv.load(c)
+            vec_loadable = True
+            c.close()
+        except Exception:
+            vec_loadable = False
+    base["sqlite_vec"] = {
+        "installed": vec_installed,
+        "loadable": vec_loadable,
+        "version": vec_version,
+    }
+    # Also report provider explicitly
+    provider = getattr(settings, "embedding_provider", None) or settings.embedding_backend
+    base["active_provider"] = provider
+    return base
 
 
 def doctor_workspace_open(path: str | Path) -> dict[str, Any]:

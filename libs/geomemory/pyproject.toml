@@ -26,14 +26,13 @@ dependencies = [
     "numpy>=1.24",
     "click>=8.0",
     "PyYAML>=6.0",
+    "onnxruntime>=1.18",
+    "tokenizers>=0.15",
+    "huggingface-hub>=0.23",
+    "sqlite-vec>=0.1.6",
 ]
 
 [project.optional-dependencies]
-# Core AI/retrieval stack (heavy but always recommended)
-ai = [
-    "txtai>=8.0",
-    "llama-cpp-python>=0.2.0",
-]
 # Document parsing
 docs = [
     "pymupdf>=1.23",
@@ -46,16 +45,16 @@ rs = [
     "geopandas>=0.14",
     "Pillow>=10.0",
 ]
-# Sentence-transformers dense text embeddings
-st = [
-    "sentence-transformers>=3.0",
-    "huggingface-hub>=0.23",
-]
-# ONNX dense text embeddings (CPU-friendly, Xenova quantized default)
+# ONNX dense text embeddings (CPU-friendly, Xenova quantized default) — also in base deps; alias kept for docs
 onnx = [
     "onnxruntime>=1.18",
     "tokenizers>=0.15",
     "huggingface-hub>=0.23",
+    "sqlite-vec>=0.1.6",
+]
+# Legacy llama.cpp GGUF embeddings/LLM (offline/air-gapped)
+llamacpp = [
+    "llama-cpp-python>=0.2.0",
 ]
 # Qdrant server-mode vector backend
 vector = [

@@ -176,15 +176,17 @@ class WorkspaceSettings(GeoMemoryModel):
     llm_model_id: str = "kilo-auto/free"
     llm_context_window: int = 32768
 
-    # Embedding backend selection (additive; unset preserves hashing/llama-cpp baseline).
+    # Embedding provider selection — canonical is ONNX (Xenova quantized).
+    # embedding_backend is deprecated alias; embedding_provider is preferred.
+    embedding_provider: Literal["onnx", "openai", "voyage", "custom", "hashing", "llama-cpp"] | None = None
     embedding_backend: Literal["hashing", "llama-cpp", "sentence-transformers", "onnx"] = (
         "hashing"
     )
-    st_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
-    onnx_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    st_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"  # deprecated alias
+    onnx_model_name: str = "Xenova/all-MiniLM-L6-v2"
 
-    # Vector backend selection (additive; default 'lancedb' is embedded LanceDB).
-    vector_backend: Literal["lancedb", "qdrant", "local", "numpy"] = "lancedb"
+    # Vector backend selection — sqlite-vec is the lightweight default; lancedb/qdrant optional.
+    vector_backend: Literal["sqlite-vec", "lancedb", "qdrant", "local", "numpy"] = "sqlite-vec"
     qdrant_url: str | None = None
     qdrant_api_key: str | None = None
 
@@ -193,6 +195,22 @@ class WorkspaceSettings(GeoMemoryModel):
     def _migrate_vector_backend(cls, v: str | None) -> str | None:
         if v == "local":
             return "lancedb"
+        return v
+
+    @field_validator("embedding_provider", mode="before")
+    @classmethod
+    def _migrate_embedding_provider(cls, v: str | None) -> str | None:
+        # Normalize empty string to None → factory resolves default onnx
+        if v == "":
+            return None
+        return v
+
+    @field_validator("onnx_model_name", mode="before")
+    @classmethod
+    def _migrate_onnx_model(cls, v: str | None) -> str | None:
+        # Legacy ST id → Xenova quantized ONNX export
+        if v == "sentence-transformers/all-MiniLM-L6-v2":
+            return "Xenova/all-MiniLM-L6-v2"
         return v
 
     # PDF parser selection (auto = OpenDataLoader when Java+extra present, else PyMuPDF).
