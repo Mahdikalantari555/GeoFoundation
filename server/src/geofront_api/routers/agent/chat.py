@@ -50,7 +50,7 @@ async def chat(req: Request, body: ChatRequest) -> StreamingResponse:
         yield _sse("conversation", {"conversation_id": conv_id})
         yield _sse("thinking", {})
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         queue: asyncio.Queue[str | None] = asyncio.Queue()
 
         def on_event(text: str) -> None:
@@ -66,6 +66,16 @@ async def chat(req: Request, body: ChatRequest) -> StreamingResponse:
 
         try:
             while not task.done():
+                # Support client abort via disconnect detection
+                if await req.is_disconnected():
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+                    yield _sse("error", {"code": "cancelled", "message": "Client aborted stream"})
+                    yield _sse("done", {"conversation_id": conv_id})
+                    return
                 try:
                     event_text = await asyncio.wait_for(
                         queue.get(), timeout=_KEEPALIVE_SECONDS
@@ -75,7 +85,7 @@ async def chat(req: Request, body: ChatRequest) -> StreamingResponse:
                     if event_text.startswith("[tool]"):
                         parts = event_text.split(" -> ", 1)
                         tool_name = parts[0].replace("[tool] ", "").strip()
-                        status_info = parts[1].len(parts) > 1 and parts[1] or ""
+                        status_info = parts[1] if len(parts) > 1 else ""
                         yield _sse("tool_start", {"tool": tool_name})
                         yield _sse("tool_end", {"tool": tool_name, "status": status_info})
                     else:
@@ -83,11 +93,24 @@ async def chat(req: Request, body: ChatRequest) -> StreamingResponse:
                 except asyncio.TimeoutError:
                     yield ": ping\n\n"
 
-            answer = await task
-            yield _sse("message", {"text": answer, "final": True})
-            yield _sse("done", {"conversation_id": conv_id})
-        except Exception as exc:  # noqa: BLE001 - SSE error path
-            yield _sse("error", {"message": str(exc)})
+            try:
+                answer = await task
+                yield _sse("message", {"text": answer, "final": True})
+                yield _sse("done", {"conversation_id": conv_id})
+            except asyncio.CancelledError:
+                yield _sse("error", {"code": "cancelled", "message": "Stream cancelled"})
+                yield _sse("done", {"conversation_id": conv_id})
+            except GeoFrontError as exc:
+                yield _sse("error", {"code": exc.code, "message": exc.message, "detail": exc.detail})
+                yield _sse("done", {"conversation_id": conv_id})
+            except Exception as exc:  # noqa: BLE001 - SSE error path
+                yield _sse("error", {"code": "internal_error", "message": str(exc)})
+                yield _sse("done", {"conversation_id": conv_id})
+        except asyncio.CancelledError:
+            # Client disconnected during streaming
+            if not task.done():
+                task.cancel()
+            yield _sse("error", {"code": "cancelled", "message": "Stream cancelled"})
             yield _sse("done", {"conversation_id": conv_id})
 
     return StreamingResponse(

@@ -40,9 +40,11 @@ export function OverviewPage() {
       </div>
 
       {!isOpen ? (
-        <p className="rounded-lg border border-gf-border bg-gf-panel p-4 text-sm text-gf-muted">
-          {t('settings.llmKeyHint')}
-        </p>
+        <div className="rounded-lg border border-gf-border bg-gf-panel p-4 text-sm text-gf-muted" data-testid="overview-empty">
+          <p className="font-medium">No workspace open</p>
+          <p className="mt-1 text-xs">Create in default <span className="font-mono">Workspaces/</span> or open an existing workspace from the header.</p>
+          <p className="mt-2 text-xs">{t('settings.llmKeyHint')}</p>
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {cards.map(({ icon: Icon, label, value }) => (

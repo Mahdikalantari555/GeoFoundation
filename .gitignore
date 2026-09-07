@@ -13,6 +13,7 @@ dist/
 *.local
 
 # Runtime data (never commit workspaces, models, or secrets)
+Workspaces/
 **/workspace/
 **/workspaces/
 /Workspaces/

@@ -2,15 +2,25 @@ const BASE = '/api/v1'
 
 export interface DoctorReport {
   environment: Record<string, unknown>
-  workspace: Record<string, unknown>
-  workspace_open: Record<string, unknown>
+  workspace: Record<string, unknown> & { checks?: Record<string, unknown>; ok?: boolean; closed?: boolean }
+  workspace_open: Record<string, unknown> & { checks?: Record<string, unknown>; ok?: boolean; closed?: boolean }
   embedding: {
     hub_count: number
     downloaded: number
     active_backend: string | null
     active_model: string | null
     active_space_id: string | null
+    sqlite_vec?: unknown
   }
+  diagnostics?: {
+    llm?: Record<string, unknown>
+    qdrant?: Record<string, unknown>
+    pdf_parser?: Record<string, unknown>
+    vision?: Record<string, unknown>
+    embedding?: Record<string, unknown>
+    sqlite_vec?: Record<string, unknown>
+  }
+  resolved_workspace_root?: string
 }
 
 export interface LLMReport {

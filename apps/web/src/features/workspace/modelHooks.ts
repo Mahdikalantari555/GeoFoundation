@@ -3,7 +3,6 @@ import {
   modelsApi,
   workspaceApi,
   type EmbeddingModel,
-  type ModelDownloadResponse,
 } from '@/api/workspace'
 import type { UpdateSettingsRequest } from '@/api/workspace'
 

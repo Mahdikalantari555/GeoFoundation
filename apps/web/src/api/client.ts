@@ -13,11 +13,15 @@ const BASE = import.meta.env.DEV ? '/api/v1' : '/api/v1'
 export class ApiError extends Error {
   code: string
   detail?: unknown
+  status: number
+  requestId?: string
 
-  constructor(body: ApiErrorBody['error']) {
+  constructor(body: ApiErrorBody['error'], status: number, requestId?: string) {
     super(body.message)
     this.code = body.code
     this.detail = body.detail
+    this.status = status
+    this.requestId = requestId
   }
 }
 
@@ -34,7 +38,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
       /* non-JSON error body */
     }
     const err = (parsed as ApiErrorBody | null)?.error
-    throw new ApiError(err ?? { code: 'http_error', message: resp.statusText })
+    const rid = resp.headers.get('X-Request-ID') ?? undefined
+    throw new ApiError(err ?? { code: 'http_error', message: resp.statusText }, resp.status, rid)
   }
   return (await resp.json()) as T
 }

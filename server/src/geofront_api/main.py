@@ -93,16 +93,27 @@ def create_app() -> FastAPI:
     )
 
     @app.middleware("http")
-    async def log_requests(request: Request, call_next):
+    async def request_id_middleware(request: Request, call_next):
+        import uuid
+
+        rid = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
+        request.state.request_id = rid
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Request-ID"] = rid
+        # Include request_id and workspace for correlation
+        from .state import get_state
+
+        ws_id = str(get_state().workspace_path) if get_state().workspace_path else "-"
         log.info(
-            "%s %s -> %d (%.1fms)",
+            "%s %s -> %d (%.1fms) rid=%s ws=%s",
             request.method,
             request.url.path,
             response.status_code,
             elapsed_ms,
+            rid,
+            ws_id,
         )
         return response
     app.add_middleware(

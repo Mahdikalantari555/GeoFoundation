@@ -12,10 +12,14 @@ from typing import Any
 class JobRecord:
     id: str
     type: str
-    status: str = "pending"  # pending | running | completed | failed
+    status: str = "pending"  # pending | running | completed | failed | error
     progress: float = 0.0
     result: Any | None = None
     error: str | None = None
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in ("completed", "failed", "error")
 
     def public(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -55,7 +59,7 @@ class JobManager:
                 terminal = [
                     k
                     for k, v in self._jobs.items()
-                    if v.status in ("completed", "failed")
+                    if v.status in ("completed", "failed", "error")
                 ]
                 for key in terminal[: len(self._jobs) - self._max_records + 1]:
                     self._jobs.pop(key, None)
@@ -90,8 +94,19 @@ class JobManager:
                     },
                 )
             except Exception as exc:  # noqa: BLE001 — surfaced via job record
-                record.status = "failed"
+                record.status = "error"
                 record.error = str(exc)
+                get_event_bus().publish(
+                    "job_progress",
+                    {
+                        "id": record.id,
+                        "type": record.type,
+                        "status": "error",
+                        "progress": record.progress,
+                        "error": record.error,
+                    },
+                )
+                # Also publish "failed" alias for backwards compat with old clients
                 get_event_bus().publish(
                     "job_progress",
                     {

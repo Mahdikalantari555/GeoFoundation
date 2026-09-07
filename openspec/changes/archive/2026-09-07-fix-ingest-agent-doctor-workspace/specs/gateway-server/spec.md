@@ -30,19 +30,32 @@ The system SHALL default the workspace root to the gitignored `Workspaces` direc
 ### Requirement: Uniform error envelope
 All error responses SHALL use `{error: {code, message, detail?}}` and non-2xx responses SHALL include an `X-Request-ID` header whose value also appears as `detail.request_id` on 500. Validation errors SHALL include `detail` as the structured field-error array. 500 SHALL never leak a stack to clients.
 
+#### Scenario: Validation failure
+- **WHEN** a request body fails schema validation
+- **THEN** the response is `422` with code `validation`
+
 #### Scenario: 500 carries request_id
 - **WHEN** an unhandled exception occurs
 - **THEN** the response is 500 with `error.code=internal_error`, `error.detail.request_id` present, and header `X-Request-ID` matching `detail.request_id`, and server log contains the same id
 
 ### Requirement: Background jobs
-Long operations SHALL expose error terminals. The ingest job result on failure SHALL set `error` and `job_progress` SHALL emit an `error` status that polling `GET /api/v1/jobs/{id}` surfaces.
+Long operations (ingest, index build/rebuild, benchmark, playbook runs) SHALL return `202 {job_id}` and report progress via `GET /api/v1/jobs/{id}` until terminal status; job results SHALL surface library outcomes including ingest dedup (`skipped: true`). On failure the job SHALL set `error` and `job_progress` SHALL emit an `error` status that polling `GET /api/v1/jobs/{id}` surfaces.
+
+#### Scenario: Ingest job lifecycle
+- **WHEN** a file is uploaded to `POST /api/v1/ingest`
+- **THEN** the response is `202` with a job id
+- **AND** polling `GET /jobs/{id}` transitions queued → running → done with the ingest result (asset_id, segment_count, or skipped flag)
 
 #### Scenario: Failed ingest surfaced
 - **WHEN** `ws.ingest` raises inside a job
 - **THEN** `GET /jobs/{id}` eventually reports `status=error` with `error.code` and `detail`, and an SSE `job_progress` event with `status=error` is published
 
 ### Requirement: Sandboxed artifact serving
-Unchanged, but error for traversal/missing file SHALL use the uniform envelope (404 `asset_not_found` / `not_found`) with request_id.
+`GET /api/v1/agent/files/*` SHALL serve only files under the active workspace's `runs/` directory, normalizing paths and rejecting traversal. Errors SHALL use the uniform envelope (404 `asset_not_found` / `not_found`) with `X-Request-ID`.
+
+#### Scenario: Traversal rejected
+- **WHEN** a request path contains `..` or escapes the runs root
+- **THEN** the response is `404`
 
 ## ADDED Scenarios for existing Requirements
 

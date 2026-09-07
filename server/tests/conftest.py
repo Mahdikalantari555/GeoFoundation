@@ -41,7 +41,7 @@ def wait_job(client: TestClient, job_id: str) -> dict[str, object]:
 
     for _ in range(100):
         body = client.get(f"/api/v1/jobs/{job_id}").json()
-        if body["status"] in ("completed", "failed"):
+        if body["status"] in ("completed", "failed", "error"):
             return body
         time.sleep(0.05)
     raise AssertionError(f"job {job_id} did not finish")

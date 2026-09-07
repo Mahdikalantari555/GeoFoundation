@@ -39,6 +39,9 @@ def _require_ws() -> GeoMemory:
     return get_state().require_workspace()
 
 
+MAX_INGEST_BYTES = 500 * 1024 * 1024  # 500 MB per spec
+
+
 def _check_extension(filename: str) -> None:
     suffix = Path(filename).suffix.lower()
     if suffix not in ACCEPTED_EXTENSIONS:
@@ -47,6 +50,17 @@ def _check_extension(filename: str) -> None:
             message=f"Unsupported file type: '{suffix or filename}'. "
             f"Accepted: {', '.join(sorted(ACCEPTED_EXTENSIONS))}",
             status_code=422,
+            detail={"accepted": sorted(ACCEPTED_EXTENSIONS), "received": suffix or filename},
+        )
+
+
+def _check_size(data: bytes) -> None:
+    if len(data) > MAX_INGEST_BYTES:
+        raise GeoFrontError(
+            code="payload_too_large",
+            message=f"File too large: {len(data)} bytes exceeds limit {MAX_INGEST_BYTES} bytes (500 MB).",
+            status_code=413,
+            detail={"size_bytes": len(data), "limit_bytes": MAX_INGEST_BYTES},
         )
 
 
@@ -101,6 +115,7 @@ async def ingest_file(
     ws = _require_ws()
     _check_extension(file.filename or "")
     data = await file.read()
+    _check_size(data)
     return await _submit(ws, file.filename or "upload", data, collection_id, parser, index_after)
 
 
@@ -114,6 +129,7 @@ async def ingest_bytes(req: IngestBytesRequest) -> dict[str, str]:
         raise GeoFrontError(
             code="invalid_base64", message="data_base64 is not valid base64.", status_code=422
         ) from exc
+    _check_size(raw)
     return await _submit(ws, req.filename, raw, req.collection_id, req.parser, req.index_after)
 
 

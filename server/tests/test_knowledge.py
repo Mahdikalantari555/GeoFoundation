@@ -146,8 +146,8 @@ class TestIngest:
             },
         )
         job = wait_job(client, resp.json()["job_id"])
-        assert job["status"] == "failed"
-        assert "Collection" in job["error"]
+        assert job["status"] in ("failed", "error")
+        assert "Collection" in str(job.get("error") or "")
 
 
 class TestJobs:

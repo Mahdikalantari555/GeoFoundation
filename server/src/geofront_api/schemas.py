@@ -53,7 +53,7 @@ class IngestBytesRequest(BaseModel):
 
 
 class CreateWorkspaceRequest(BaseModel):
-    path: str
+    path: str = ""
     name: str = "GeoMemory Workspace"
     language: str | None = Field(default=None, pattern="^(en|fa)$")
     offline: bool = True
@@ -82,6 +82,7 @@ class UpdateSettingsRequest(BaseModel):
     llm_provider: str | None = Field(default=None, pattern="^(api|llamacpp)$")
     llm_api_base_url: str | None = None
     llm_api_key_env: str | None = None
+    llm_api_key: str | None = Field(default=None, description="LLM API key value to set server-side (never persisted to workspace DB, never returned)")
     llm_model_id: str | None = None
     llm_context_window: int | None = Field(default=None, ge=1024, le=200000)
     embedding_backend: str | None = Field(

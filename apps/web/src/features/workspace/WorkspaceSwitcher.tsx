@@ -38,7 +38,7 @@ export function WorkspaceSwitcher() {
   }
 
   function submitCreate() {
-    if (!path.trim() || !name.trim()) return
+    if (!name.trim()) return
     create.mutate({ path: path.trim(), name: name.trim(), offline: true })
   }
 
@@ -88,11 +88,15 @@ export function WorkspaceSwitcher() {
       <button
         type="button"
         onClick={submitCreate}
-        disabled={create.isPending || !path.trim() || !name.trim()}
+        disabled={create.isPending || !name.trim()}
+        title={!path.trim() ? 'Create in default Workspaces/' : undefined}
         className="flex items-center gap-1 rounded-md bg-gf-accent px-2.5 py-1 text-sm font-medium text-white disabled:opacity-50"
       >
         <Plus className="size-3.5" /> {t('common.create')}
       </button>
+      {!path.trim() && name.trim() && (
+        <span className="text-[11px] text-gf-muted">→ Workspaces/{name.trim()}</span>
+      )}
       <button
         type="button"
         onClick={() => close.mutate()}

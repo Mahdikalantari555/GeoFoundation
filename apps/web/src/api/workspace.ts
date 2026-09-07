@@ -3,8 +3,12 @@ import { ApiError, type ApiErrorBody } from './client'
 
 export type CreateWorkspaceRequest = components['schemas']['CreateWorkspaceRequest']
 export type OpenWorkspaceRequest = components['schemas']['OpenWorkspaceRequest']
-export type UpdateSettingsRequest = components['schemas']['UpdateSettingsRequest']
-export type DownloadModelRequest = components['schemas']['DownloadModelRequest']
+export type UpdateSettingsRequest = components['schemas']['UpdateSettingsRequest'] & {
+  llm_api_key?: string
+}
+export type DownloadModelRequest = components['schemas'] extends { DownloadModelRequest: infer T }
+  ? T
+  : { model_name: string; backend: string }
 
 /** Mirrors geomemory WorkspaceSettings (returned as inline JSON, not a named schema). */
 export type WorkspaceSettings = {
@@ -70,7 +74,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       /* non-JSON error body */
     }
     const err = (parsed as ApiErrorBody | null)?.error
-    throw new ApiError(err ?? { code: 'http_error', message: resp.statusText })
+    const rid = resp.headers.get('X-Request-ID') ?? undefined
+    throw new ApiError(err ?? { code: 'http_error', message: resp.statusText }, resp.status, rid)
   }
   return (await resp.json()) as T
 }
@@ -89,7 +94,7 @@ export const workspaceApi = {
     ),
   close: () => request<{ status: string }>('/workspace/close', { method: 'POST' }),
   stats: () => request<Record<string, unknown>>('/workspace/stats'),
-  updateSettings: (body: UpdateSettingsRequest) =>
+  updateSettings: (body: UpdateSettingsRequest & Record<string, unknown>) =>
     request<WorkspaceSettings>('/workspace/settings', {
       method: 'PUT',
       body: JSON.stringify(body),

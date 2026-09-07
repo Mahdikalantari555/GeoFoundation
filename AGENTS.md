@@ -53,9 +53,12 @@ Known pre-existing failure (in libs/geomemory, not ours to fix here):
 2. **SQLite single writer**: server runs one uvicorn worker, holds one
    active workspace, serializes writes behind the asyncio lock in
    `server/src/geofront_api/state.py`.
-3. **Secrets are server-env only.** LLM API keys are read from the env var
-   named by `llm_api_key_env` (default `GEOMEMORY_LLM_API_KEY`); never
-   accepted from clients, never persisted, never returned in responses.
+3. **Secrets handling.** LLM API keys are read from the env var named by
+   `llm_api_key_env` (default `GEOMEMORY_LLM_API_KEY`). Keys **MAY** be set
+   at runtime via `PUT /api/v1/workspace/settings` field `llm_api_key` → the
+   gateway sets `os.environ[effective_key_env]` in-process (never persisted to
+   workspace DB, never returned); `llm_api_key_env` itself may be updated.
+   Keys are read from env at call time; never persisted, never returned.
 4. **Blocking facade calls run in a threadpool** (`anyio.to_thread`) —
    never call the sync libs directly on the event loop.
 5. **Content identity = SHA-256; provenance chain stays traceable**:

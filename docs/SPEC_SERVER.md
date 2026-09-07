@@ -31,21 +31,22 @@
 | POST | `/workspace/open` | `{path}` → `GeoMemory.open` (auto-detects a nested workspace subdir) |
 | POST | `/workspace/close` | → `ws.close()` |
 | GET | `/workspace` | status + `ws.settings` |
-| PUT | `/workspace/settings` | partial config → `ws.update_settings` (**422 if `llm_api_key_env` is in the body**) |
+| PUT | `/workspace/settings` | partial config → `ws.update_settings` (accepts `llm_api_key` to set server env `llm_api_key_env` at runtime, never returned; `llm_api_key_env` may be updated) |
 | GET | `/workspace/stats` | `ws.stats()` |
 
 Config fields: `name, language(en|fa), offline, batch_size, model_path,
 embedding_path, vision_path` + LLM compute: `llm_provider (api|llamacpp,
 api = default), llm_api_base_url, llm_model_id, llm_context_window,
-llm_api_key_env`. The API key itself is **server-env-only** (read at call
-time from the named env var, e.g. `GEOMEMORY_LLM_API_KEY`); it is never
-accepted from clients, never persisted, never returned by any endpoint.
-`PUT /workspace/settings` rejects any request that attempts to set
-`llm_api_key_env` with HTTP 422 — clients configure only the *env var name*,
-and the gateway seeds `llm_api_base_url` / `llm_model_id` from
-`GEOMEMORY_LLM_API_BASE_URL` / `GEOMEMORY_LLM_MODEL_ID` in the server env when
-a workspace is created or opened. Workspace files are stored nested under
-`path/<name>/` so multiple workspaces can share a parent directory.
+llm_api_key_env, llm_api_key`. The API key is read at call time from the
+named env var (e.g. `GEOMEMORY_LLM_API_KEY`); it **MAY** be set via
+`PUT /workspace/settings` field `llm_api_key` — the gateway sets
+`os.environ[effective_key_env]` at runtime, never persists it to the workspace
+DB, never returns it, and optionally re-inits the agent backend. `llm_api_key_env`
+may be updated to rename the env var. The gateway seeds `llm_api_base_url` /
+`llm_model_id` from `GEOMEMORY_LLM_API_BASE_URL` /
+`GEOMEMORY_LLM_MODEL_ID` in the server env when a workspace is created or
+opened. Workspace files are stored nested under `path/<name>/` so multiple
+workspaces can share a parent directory.
 
 ## Collections
 

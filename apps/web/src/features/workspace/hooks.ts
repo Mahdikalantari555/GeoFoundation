@@ -3,7 +3,6 @@ import {
   workspaceApi,
   type CreateWorkspaceRequest,
   type OpenWorkspaceRequest,
-  type UpdateSettingsRequest,
   type WorkspaceSettings,
   type WorkspaceStatus,
 } from '@/api/workspace'

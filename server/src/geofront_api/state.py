@@ -8,6 +8,24 @@ from typing import TYPE_CHECKING
 
 from .errors import WorkspaceNotOpenError
 
+
+def get_default_workspace_root() -> Path:
+    """Resolve GEOFOND_WORKSPACE with dev/container defaults.
+
+    Dev default is /mnt/data/Projects/RS/Thesis_Project/GeoFoundation/Workspaces
+    (gitignored), container default is /workspace. Overridable via GEOFOND_WORKSPACE.
+    """
+    env = os.environ.get("GEOFOND_WORKSPACE", "").strip()
+    if env:
+        return Path(env).expanduser()
+    # Container image uses /workspace; prefer it when it exists
+    if Path("/workspace").exists():
+        return Path("/workspace")
+    return Path("/mnt/data/Projects/RS/Thesis_Project/GeoFoundation/Workspaces")
+
+
+DEFAULT_WORKSPACE_ROOT = get_default_workspace_root()
+
 if TYPE_CHECKING:
     from geomemory import GeoMemory
 

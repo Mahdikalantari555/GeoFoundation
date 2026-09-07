@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Download, FolderOpen, Save } from 'lucide-react'
 import { ApiError } from '@/api/client'
-import type { UpdateSettingsRequest, WorkspaceSettings } from '@/api/workspace'
+import type { WorkspaceSettings } from '@/api/workspace'
 import { useUpdateSettings, useWorkspace } from './hooks'
 import { useModels, useDownloadModel, formatBytes } from './modelHooks'
 
@@ -16,6 +16,7 @@ export function SettingsPage() {
   const settings = ws?.settings ?? null
 
   const [form, setForm] = useState<WorkspaceSettings | null>(null)
+  const [apiKey, setApiKey] = useState('')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const modelDirRef = useRef<HTMLInputElement>(null)
@@ -62,7 +63,7 @@ export function SettingsPage() {
     if (!form) return
     setError(null)
     setSaved(false)
-    const body: UpdateSettingsRequest = {
+    const body: Record<string, unknown> = {
       name: form.name,
       language: form.language,
       offline: form.offline,
@@ -81,6 +82,9 @@ export function SettingsPage() {
       onnx_model_name: form.onnx_model_name,
       vector_backend: form.vector_backend,
       pdf_parser: form.pdf_parser,
+    }
+    if (apiKey.trim()) {
+      ;(body as Record<string, unknown>).llm_api_key = apiKey.trim()
     }
     update.mutate(body, {
       onSuccess: () => setSaved(true),
@@ -250,7 +254,18 @@ export function SettingsPage() {
             onChange={(e) => set('llm_api_key_env', e.target.value)}
           />
         </label>
-        <p className="text-xs text-gf-err">{t('settings.llmKeyHint')}</p>
+        <label className="block text-sm">
+          {t('settings.llmKey', 'LLM API key')}
+          <input
+            type="password"
+            className={inputCls}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={t('settings.llmKeyPlaceholder', 'sk-... (set to update server key, never shown again)')}
+            autoComplete="off"
+          />
+        </label>
+        <p className="text-xs text-gf-muted">{t('settings.llmKeyHint')}</p>
       </section>
 
       {/* ── Save ─────────────────────────────────────────────────── */}

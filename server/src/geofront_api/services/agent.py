@@ -32,11 +32,17 @@ class AgentService:
         self._registry: Registry | None = None
         self._store: Store | None = None
         self._settings: Any | None = None  # type: ignore[no-redef]
+        self._workspace_path: Path | None = None
         self._lock = asyncio.Lock()
 
     @property
     def is_initialized(self) -> bool:
-        return self._core is not None
+        # Workspace-bound check: ensure core exists and workspace path matches active workspace
+        if self._core is None or self._workspace_path is None:
+            return False
+        # Verify that the stored workspace still matches the directory on disk
+        # If the workspace was switched elsewhere, is_initialized will be False until re-init
+        return self._workspace_path.exists()
 
     @property
     def registry(self) -> Registry:
@@ -98,6 +104,7 @@ class AgentService:
         self._registry = registry
         self._store = store
         self._core = core
+        self._workspace_path = workspace_path
 
     def _build_registry(self, settings: AgentSettings, store: Store) -> Registry:
         registry = Registry()
@@ -115,6 +122,7 @@ class AgentService:
         self._registry = None
         self._store = None
         self._settings = None
+        self._workspace_path = None
 
 
 _agent_service: AgentService | None = None

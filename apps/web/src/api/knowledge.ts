@@ -15,7 +15,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       /* non-JSON error body */
     }
     const err = (parsed as ApiErrorBody | null)?.error
-    throw new ApiError(err ?? { code: 'http_error', message: resp.statusText })
+    const rid = resp.headers.get('X-Request-ID') ?? undefined
+    throw new ApiError(err ?? { code: 'http_error', message: resp.statusText }, resp.status, rid)
   }
   return (await resp.json()) as T
 }
@@ -32,7 +33,7 @@ export type Collection = {
 export type Job = {
   id: string
   type: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'error'
   progress: number
   result?: Record<string, unknown> | null
   error?: string | null
