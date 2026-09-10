@@ -30,3 +30,7 @@ in-memoria.db
 
 todo.md
 .memdb/
+
+.coverage
+.coverage.*
+*.coverage

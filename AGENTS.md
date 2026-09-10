@@ -1,3 +1,63 @@
+# AGENTS.md — agy Agent Guidelines & WSL Development Environment(This is just for agy Agent that works from Windows)
+
+## 1. Operating Environment & Execution Model
+
+* **Host System**: Windows is the **HOST ONLY**.
+  * **DO NOT** create or write project code/artifacts into Windows host paths (except this configuration).
+  * **All** development work, project files, package installs, and code modifications live inside WSL (Ubuntu).
+* **WSL Target Distribution**: `Ubuntu`
+* **WSL Base Path**: `\\wsl.localhost\Ubuntu\` (or `/home/asus/` inside WSL)
+
+---
+
+## 2. Package Manager Hierarchy (Strict Precedence)
+
+1. **`bun` (Always Preferred)**:
+   * Binary path: `/home/asus/.bun/bin/bun`
+   * Use `bun` for running scripts, installing packages, tests, and adding skills (`bunx skills add <skill>`).
+2. **`pnpm` (Secondary)**: Use when repository has existing `pnpm-lock.yaml` or explicit requirement.
+3. **`npm` (Last Resort)**: Use only if neither `bun` nor `pnpm` is supported.
+
+---
+
+## 3. Project Locations & Conda Environment
+
+* **Primary Project Directory**:
+  * Inside WSL: `/home/asus/Projects/GeoFoundation`
+  * From Windows path: `\\wsl.localhost\Ubuntu\home\asus\Projects\GeoFoundation`
+* **All Projects Root**:
+  * Inside WSL: `/home/asus/Projects/`
+* **Python / Conda Environment**:
+  * Miniforge Path: `/home/asus/miniforge3`
+  * Active Environment: `geospatial` (`/home/asus/miniforge3/envs/geospatial`)
+  * Python Binary: `/home/asus/miniforge3/envs/geospatial/bin/python`
+
+---
+
+## 4. Command Execution Standard in WSL
+
+Always execute project commands in WSL under the `geospatial` conda environment.
+Pattern for running commands:
+
+```bash
+wsl -d Ubuntu bash -c "export PATH=/home/asus/.bun/bin:\$PATH && source /home/asus/miniforge3/bin/activate geospatial && cd /home/asus/Projects/<ProjectName> && <COMMAND>"
+```
+
+---
+
+## 5. OpenSpec Standard Workflow
+
+**Always use OpenSpec in projects.**
+
+* **Spec Location**: `<project-root>/openspec/`
+* **Workflow**:
+  1. **Proposals First**: Any new feature or architectural modification starts with an OpenSpec change proposal in `openspec/changes/`.
+  2. **Track Tasks**: Break tasks down and follow `tasks/todo.md` / `openspec` tasks.
+  3. **Respect Specs**: Always cross-reference `openspec/specs/` and `docs/` before implementing changes.
+  4. **Archive on Completion**: Follow the spec lifecycle and archive completed changes in `openspec/changes/archive/`.
+
+---
+
 # AGENTS.md — GeoFoundation
 
 > Guidance for AI coding agents working in this repository. Authoritative
