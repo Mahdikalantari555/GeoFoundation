@@ -1,6 +1,6 @@
 # AGENTS.md — agy Agent Guidelines & WSL Development Environment(This is just for agy Agent that works from Windows)
 
-## 1. Operating Environment & Execution Model
+## 1. Operating Environment & Execution Model(just use this if you are agy agent.)
 
 * **Host System**: Windows is the **HOST ONLY**.
   * **DO NOT** create or write project code/artifacts into Windows host paths (except this configuration).
