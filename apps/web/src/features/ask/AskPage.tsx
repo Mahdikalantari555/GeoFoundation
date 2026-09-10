@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, ShieldAlert, BookOpen, X } from 'lucide-react'
+import { Send, ShieldAlert, BookOpen, X, Pencil } from 'lucide-react'
 import type { AskMode, QAResult } from '@/api/search'
 import { askApi } from '@/api/search'
 import { ApiError } from '@/api/client'
+import { opsApi } from '@/api/ops'
 import { useWorkspace } from '@/features/workspace/hooks'
 
 type Message =
   | { id: number; role: 'user'; text: string }
   | { id: number; role: 'assistant'; qa: QAResult }
+
+type CorrectionState =
+  | { status: 'idle' }
+  | { status: 'editing' }
+  | { status: 'submitted' }
 
 const MODES: AskMode[] = ['grounded_qa', 'research', 'code']
 
@@ -23,6 +29,7 @@ export function AskPage() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sourcesOf, setSourcesOf] = useState<QAResult | null>(null)
+  const [corrections, setCorrections] = useState<Record<number, CorrectionState>>({})
   const idRef = useRef(0)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -88,7 +95,30 @@ export function AskPage() {
               </div>
             </div>
           ) : (
-            <AssistantMessage key={m.id} qa={m.qa} onShowSources={() => setSourcesOf(m.qa)} />
+            <AssistantMessage
+              key={m.id}
+              qa={m.qa}
+              onShowSources={() => setSourcesOf(m.qa)}
+              correctionState={corrections[m.id] ?? { status: 'idle' }}
+              onEditCorrection={() =>
+                setCorrections((prev) => ({ ...prev, [m.id]: { status: 'editing' } }))
+              }
+              onSubmitCorrection={(msgId, content) => {
+                const qa = m.qa
+                opsApi
+                  .suggestCorrection(qa.turn_id ?? '', content)
+                  .then(() =>
+                    setCorrections((prev) => ({
+                      ...prev,
+                      [msgId]: { status: 'submitted' },
+                    }))
+                  )
+                  .catch(() => setError('Failed to submit correction'))
+              }}
+              onDoneEditing={() =>
+                setCorrections((prev) => ({ ...prev, [m.id]: { status: 'idle' } }))
+              }
+            />
           )
         )}
 
@@ -136,8 +166,23 @@ export function AskPage() {
   )
 }
 
-function AssistantMessage({ qa, onShowSources }: { qa: QAResult; onShowSources: () => void }) {
+function AssistantMessage({
+  qa,
+  onShowSources,
+  correctionState,
+  onEditCorrection,
+  onSubmitCorrection,
+  onDoneEditing,
+}: {
+  qa: QAResult
+  onShowSources: () => void
+  correctionState: CorrectionState
+  onEditCorrection: () => void
+  onSubmitCorrection: (msgId: number, content: string) => void
+  onDoneEditing: () => void
+}) {
   const { t } = useTranslation()
+  const [draft, setDraft] = useState('')
 
   if (qa.abstained) {
     return (
@@ -155,11 +200,15 @@ function AssistantMessage({ qa, onShowSources }: { qa: QAResult; onShowSources: 
     )
   }
 
+  const hasCitations = qa.citations.length > 0
+  const isEditing = correctionState.status === 'editing'
+  const isSubmitted = correctionState.status === 'submitted'
+
   return (
     <div className="flex justify-start" data-testid="msg-assistant">
       <div className="max-w-[90%] space-y-2 rounded-2xl rounded-es-sm border border-gf-border bg-gf-bg px-4 py-3">
         <p className="whitespace-pre-wrap text-sm">{qa.text}</p>
-        {qa.citations.length > 0 && (
+        {hasCitations && (
           <div className="space-y-1.5" data-testid="citations">
             <p className="flex items-center gap-1 text-xs font-medium text-gf-muted">
               <BookOpen className="size-3.5" /> {t('ask.citations')}
@@ -174,7 +223,7 @@ function AssistantMessage({ qa, onShowSources }: { qa: QAResult; onShowSources: 
                   className="rounded-full border border-gf-border px-2 py-0.5 text-[11px] text-gf-accent hover:bg-gf-accent-soft"
                   data-testid={`citation-${i}`}
                 >
-                  S{i + 1} · {cit.segment_id.slice(0, 12)}…
+                  S{i + 1} · {cit.segment_id.slice(0, 12)}...
                 </button>
               ))}
             </div>
@@ -188,6 +237,54 @@ function AssistantMessage({ qa, onShowSources }: { qa: QAResult; onShowSources: 
           >
             {t('ask.showSources', { count: Math.max(qa.sources.length, qa.citations.length) })}
           </button>
+        )}
+        {hasCitations && !isEditing && !isSubmitted && (
+          <button
+            type="button"
+            onClick={onEditCorrection}
+            className="flex items-center gap-1 text-xs font-medium text-gf-muted hover:text-gf-accent"
+            data-testid="suggest-correction-btn"
+          >
+            <Pencil className="size-3" /> {t('ask.suggestCorrection')}
+          </button>
+        )}
+        {isSubmitted && (
+          <p className="text-xs text-gf-accent" data-testid="correction-submitted">
+            {t('ask.correctionSubmitted')}
+          </p>
+        )}
+        {isEditing && (
+          <div className="space-y-1.5" data-testid="correction-input">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={t('ask.correctionPlaceholder')}
+              className="w-full rounded-md border border-gf-border bg-gf-panel px-2.5 py-2 text-xs outline-none focus:border-gf-accent"
+              rows={3}
+              data-testid="correction-textarea"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (draft.trim()) onSubmitCorrection(0, draft.trim())
+                }}
+                disabled={!draft.trim()}
+                className="rounded-md bg-gf-accent px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+                data-testid="correction-submit"
+              >
+                {t('ask.send')}
+              </button>
+              <button
+                type="button"
+                onClick={onDoneEditing}
+                className="text-xs text-gf-muted hover:text-gf-text"
+                data-testid="correction-cancel"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

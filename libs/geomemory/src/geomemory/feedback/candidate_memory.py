@@ -53,7 +53,7 @@ class CandidateMemoryRepository:
             rows = self.conn.execute("SELECT * FROM candidate_memory ORDER BY updated_at DESC").fetchall()
         return [_row_to_cm(r) for r in rows]
 
-    def promote(self, cm_id: str, new_state: str, reviewer_id: str | None, note: str | None) -> CandidateMemory | None:
+    def promote(self, cm_id: str, new_state: str, reviewer_id: str | None, note: str | None, *, allow_regression: bool = False) -> CandidateMemory | None:
         cm = self.get(cm_id)
         if not cm:
             return None
@@ -68,6 +68,8 @@ class CandidateMemoryRepository:
             # allow direct to rejected from any non-rejected
             if new_state == "rejected" and cm.state != "rejected":
                 pass
+            elif allow_regression:
+                pass  # score-driven backward transition
             elif new_state != cm.state:
                 raise ValueError(f"Invalid transition {cm.state} -> {new_state}")
         audit = list(cm.audit_trail)

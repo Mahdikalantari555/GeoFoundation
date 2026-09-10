@@ -240,7 +240,10 @@
     "configureHint": "The LLM is unavailable. Configure it in Workspace settings, or set the API key on the server.",
     "citations": "Citations",
     "showSources": "Show sources ({{count}})",
-    "sourcesTitle": "Sources"
+    "sourcesTitle": "Sources",
+    "suggestCorrection": "Suggest correction",
+    "correctionPlaceholder": "Propose a corrected answer...",
+    "correctionSubmitted": "Correction submitted"
   },
   "farms": {
     "title": "Farms",

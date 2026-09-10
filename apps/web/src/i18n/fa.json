@@ -240,7 +240,10 @@
     "configureHint": "مدل زبانی در دسترس نیست. آن را در تنظیمات فضای کاری پیکربندی کنید یا کلید API را روی سرور تنظیم کنید.",
     "citations": "ارجاع‌ها",
     "showSources": "نمایش منابع ({{count}})",
-    "sourcesTitle": "منابع"
+    "sourcesTitle": "منابع",
+    "suggestCorrection": "پیشنهاد تصحیح",
+    "correctionPlaceholder": "پاسخ تصحیح‌شده را پیشنهاد دهید...",
+    "correctionSubmitted": "تصحیح ارسال شد"
   },
   "farms": {
     "title": "مزارع",

@@ -45,10 +45,8 @@ class CandidateMemoryService:
         if cm.state != "rejected":
             new_state = self.scorer.state_for(score)
             if new_state != cm.state:
-                # only promote forward
-                order = {"proposed": 0, "supported": 1, "verified": 2, "rejected": 3}
-                if order.get(new_state, 0) > order.get(cm.state, 0):
-                    self.repo.promote(cm_id, new_state, None, f"auto score {score}")
+                # allow forward promotion or backward drop via score change
+                self.repo.promote(cm_id, new_state, None, f"auto score {score}", allow_regression=True)
         updated = self.repo.get(cm_id)
         return updated.confidence_score if updated else score
 

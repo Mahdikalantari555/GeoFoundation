@@ -127,4 +127,14 @@ export const opsApi = {
       if (!r.ok) throw new Error(`Reject failed: ${r.status}`)
       return r.json()
     }),
+
+  suggestCorrection: (turnId: string, content: string, memory_type?: string) =>
+    fetch(`${BASE}/ask/${encodeURIComponent(turnId)}/suggest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, memory_type: memory_type ?? 'correction' }),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`Suggest failed: ${r.status}`)
+      return r.json()
+    }),
 }

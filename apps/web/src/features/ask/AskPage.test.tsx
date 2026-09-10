@@ -13,11 +13,16 @@ vi.mock('@/api/search', async (orig) => {
   }
 })
 
+vi.mock('@/api/ops', () => ({
+  opsApi: { suggestCorrection: vi.fn() },
+}))
+
 vi.mock('@/features/workspace/hooks', () => ({
   useWorkspace: () => ({ data: { status: 'open' } }),
 }))
 
 const { askApi } = await import('@/api/search')
+const { opsApi } = await import('@/api/ops')
 
 const abstained: QAResult = {
   text: 'not found in selected sources',
@@ -57,6 +62,7 @@ const answered: QAResult = {
   retrieval_run_id: 'run_2',
   latency_ms: 40,
   model: 'test-model',
+  turn_id: 'turn_test123',
 }
 
 function renderPage() {
@@ -120,6 +126,62 @@ describe('AskPage', () => {
       expect(vi.mocked(askApi.ask)).toHaveBeenCalledWith(
         expect.objectContaining({ mode: 'research' })
       )
+    })
+  })
+
+  it('shows a suggest-correction button when citations exist', async () => {
+    vi.mocked(askApi.ask).mockResolvedValue(answered)
+    renderPage()
+
+    fireEvent.change(screen.getByTestId('ask-input'), { target: { value: 'ndvi trend?' } })
+    fireEvent.click(screen.getByTestId('ask-send'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('msg-assistant')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('suggest-correction-btn')).toBeInTheDocument()
+  })
+
+  it('hides the suggest-correction button when no citations', async () => {
+    vi.mocked(askApi.ask).mockResolvedValue(abstained)
+    renderPage()
+
+    fireEvent.change(screen.getByTestId('ask-input'), { target: { value: 'unknown topic?' } })
+    fireEvent.click(screen.getByTestId('ask-send'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('abstention-card')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('suggest-correction-btn')).not.toBeInTheDocument()
+  })
+
+  it('opens correction input and submits it', async () => {
+    vi.mocked(opsApi.suggestCorrection).mockResolvedValue({ id: 'cm_new', content: 'fixed', state: 'proposed' } as never)
+    vi.mocked(askApi.ask).mockResolvedValue(answered)
+    renderPage()
+
+    fireEvent.change(screen.getByTestId('ask-input'), { target: { value: 'ndvi trend?' } })
+    fireEvent.click(screen.getByTestId('ask-send'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('msg-assistant')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('suggest-correction-btn'))
+    expect(screen.getByTestId('correction-input')).toBeInTheDocument()
+    expect(screen.getByTestId('correction-textarea')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('correction-textarea'), {
+      target: { value: 'NDVI is the best vegetation index.' },
+    })
+    fireEvent.click(screen.getByTestId('correction-submit'))
+
+    await waitFor(() => {
+      expect(opsApi.suggestCorrection).toHaveBeenCalledWith(
+        'turn_test123',
+        'NDVI is the best vegetation index.'
+      )
+      expect(screen.getByTestId('correction-submitted')).toBeInTheDocument()
     })
   })
 })

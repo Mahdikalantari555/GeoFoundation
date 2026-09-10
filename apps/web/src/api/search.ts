@@ -63,6 +63,7 @@ export type QAResult = {
   retrieval_run_id: string | null
   latency_ms: number | null
   model: string
+  turn_id?: string | null
 }
 
 export type FeedbackEvent = {
