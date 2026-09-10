@@ -147,6 +147,12 @@ class Registry:
     def __init__(self) -> None:
         self._tools: dict[str, ToolDefinition] = {}
         self._fns: dict[str, ToolFn] = {}
+        try:
+            from geoagent.tools import geolearn_tools
+
+            geolearn_tools.register(self)
+        except ImportError:
+            pass
 
     def register(self, definition: ToolDefinition) -> Callable[[ToolFn], ToolFn]:
         def deco(fn: ToolFn) -> ToolFn:

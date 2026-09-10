@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 memory = ["geomemory"]
+rs = ["geolearn"]
 dev = ["pytest>=7.0", "ruff"]
 
 [project.scripts]
