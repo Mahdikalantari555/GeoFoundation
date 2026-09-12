@@ -10,7 +10,6 @@ import { BBoxPicker, type BBox } from './BBoxPicker'
 import { useHitFeedback, useSearch } from './hooks'
 
 const MODES: SearchMode[] = ['sparse', 'dense', 'hybrid']
-const MODALITIES: SearchModality[] = ['text', 'image', 'both']
 
 export function SearchPage() {
   const { t } = useTranslation()
@@ -19,7 +18,6 @@ export function SearchPage() {
 
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('hybrid')
-  const [modalities, setModalities] = useState<SearchModality>('text')
   const [topN, setTopN] = useState(5)
   const [showFilters, setShowFilters] = useState(false)
 
