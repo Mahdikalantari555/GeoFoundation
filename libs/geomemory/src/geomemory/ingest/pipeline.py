@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,9 @@ class IngestionPipeline:
         chunker_name: str = DEFAULT_CHUNKER,
         parser_version: str = "0.1.0",
         artifact_dir: str | Path | None = None,
+        vision_path: str | None = None,
+        index_dir: str | Path | None = None,
+        entity_extractor: object | None = None,
     ) -> None:
         self.conn = conn
         self.objects = objects
@@ -48,6 +52,10 @@ class IngestionPipeline:
         self.chunker_name = chunker_name
         self.parser_version = parser_version
         self.artifact_dir = Path(artifact_dir) if artifact_dir else None
+        self.vision_path = vision_path
+        self.index_dir = Path(index_dir) if index_dir else None
+        self.entity_extractor = entity_extractor
+        self._log = logging.getLogger("geomemory.ingest")
 
     def ingest_source(self, source: SourceRef, collection_id: str) -> dict[str, Any]:
         """Ingest a single source into a collection. Returns a result dict."""
@@ -171,6 +179,8 @@ class IngestionPipeline:
             )
             segment_ids.append(segment.id)
 
+        self._extract_entities(segments)
+
         # Persist raster scenes / vector layers and their spatial index entries.
         for parsed in parsed_objects:
             raster_payload = parsed.metadata.get("raster")
@@ -192,6 +202,18 @@ class IngestionPipeline:
                         sensor=scene.sensor,
                     ),
                 )
+                if self.vision_path is not None and self.index_dir is not None:
+                    try:
+                        from geomemory.ingest.vision_embed import try_embed_vision
+
+                        try_embed_vision(
+                            conn=self.conn,
+                            revision_id=revision.id,
+                            vision_path=self.vision_path,
+                            index_dir=self.index_dir,
+                        )
+                    except Exception:  # noqa: BLE001 - best-effort; never abort ingest
+                        pass
             if vector_payload is not None:
                 from geomemory.rs.persist import persist_vector_layer, spatial_metadata
 
@@ -225,6 +247,29 @@ class IngestionPipeline:
             "skipped": False,
         }
 
+
+    def _extract_entities(self, segments: "list[Segment]") -> None:
+        """Extract entities from segment texts and persist them (best-effort)."""
+        if self.entity_extractor is None:
+            return
+        try:
+            # Determine workspace_id from the first matching collection; fallback to FK.
+            ws_row = self.conn.execute("SELECT workspace_id FROM collection LIMIT 1").fetchone()
+            workspace_id = ws_row["workspace_id"] if ws_row and ws_row["workspace_id"] else ""
+        except Exception:
+            workspace_id = ""
+        for seg in segments:
+            try:
+                tuples = self.entity_extractor.extract(seg.text)  # type: ignore[operator]
+            except Exception as exc:
+                self._log.warning("Entity extractor raised for segment %s: %s", seg.id, exc)
+                continue
+            for name, kind, bbox in tuples:
+                try:
+                    self._persist_entity(name, kind, bbox, seg.id, workspace_id)
+                except Exception as exc:
+                    self._log.debug("Persist entity %r/%r failed: %s", name, kind, exc)
+
     def ingest_batch(self, sources: list[SourceRef], collection_id: str) -> dict[str, Any]:
         """Ingest multiple sources, continuing past individual failures."""
         results: list[dict[str, Any]] = []
@@ -235,6 +280,24 @@ class IngestionPipeline:
             except Exception as exc:  # noqa: BLE001 - batch boundary
                 errors.append({"source": str(source.path or "<bytes>"), "error": str(exc)})
         return {"results": results, "errors": errors, "success_count": len(results), "error_count": len(errors)}
+
+
+    def _persist_entity(
+        self, name: str, kind: str, bbox: "tuple[float, float, float, float] | None", evidence_id: str, workspace_id: str
+    ) -> None:
+        """Upsert an entity by (name, kind) and link evidence."""
+        row = self.conn.execute(
+            "SELECT id FROM entity WHERE name = ? AND kind = ? AND workspace_id = ? LIMIT 1",
+            (name, kind, workspace_id),
+        ).fetchone()
+        if row is not None:
+            return
+        from geomemory.core.models import Entity
+        entity = Entity(name=name, kind=kind, workspace_id=workspace_id or None, spatial_bbox=bbox, evidence_id=evidence_id)
+        self.conn.execute(
+            "INSERT OR IGNORE INTO entity (id, name, kind, workspace_id, spatial_bbox, evidence_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (entity.id, entity.name, entity.kind, entity.workspace_id or workspace_id, json.dumps(entity.spatial_bbox) if entity.spatial_bbox else None, entity.evidence_id, entity.created_at),
+        )
 
     def _resolve_loader(self, source: SourceRef) -> Any:
         """Return a loader for the source, honoring rs asset artifact output."""

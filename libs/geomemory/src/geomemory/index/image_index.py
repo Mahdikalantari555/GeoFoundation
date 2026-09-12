@@ -24,7 +24,7 @@ _IDS_FILE = "ids.json"
 class ImageIndex:
     """In-memory index over image embeddings with numpy cosine search."""
 
-    space_id = "image.olmoearth.v1"
+    space_id = "image.olmoearth-nano-v12.v1"
 
     def __init__(self, *, embeddings: dict[str, np.ndarray] | None = None) -> None:
         self._embeddings: dict[str, np.ndarray] = dict(embeddings or {})

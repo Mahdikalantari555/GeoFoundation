@@ -153,6 +153,12 @@ class Registry:
             geolearn_tools.register(self)
         except ImportError:
             pass
+        try:
+            from geoagent.tools import rs_tools
+
+            rs_tools.register(self)
+        except ImportError:
+            pass
 
     def register(self, definition: ToolDefinition) -> Callable[[ToolFn], ToolFn]:
         def deco(fn: ToolFn) -> ToolFn:

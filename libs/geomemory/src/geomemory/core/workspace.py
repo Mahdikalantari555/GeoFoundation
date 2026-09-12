@@ -345,6 +345,17 @@ class Workspace:
                     spatial_payload["scene"],
                     tiles=spatial_payload.get("tiles"),
                 )
+                try:
+                    from geomemory.ingest.vision_embed import try_embed_vision
+
+                    try_embed_vision(
+                        conn=self.conn,
+                        revision_id=revision.id,
+                        vision_path=self.settings.vision_path,
+                        index_dir=self.index_dir,
+                    )
+                except Exception:  # noqa: BLE001 - best-effort; never abort ingest
+                    pass
             elif kind == "vector":
                 from geomemory.rs.persist import persist_vector_layer
 
@@ -427,6 +438,7 @@ class Workspace:
         spatial: SpatialFilter | None = None,
         temporal: TemporalFilter | None = None,
         sensor: list[str] | None = None,
+        expand_relations: bool = False,
     ) -> SearchResult:
         """Execute a hybrid search.
 
@@ -453,6 +465,12 @@ class Workspace:
             fused = self._merge_candidate_hits(fused, candidate_hits, top_n=top_n)
         fused = apply_hit_filters(fused, spatial=spatial, temporal=temporal, sensors=sensor)
 
+        # Expand relations: append supplementary context from related entities.
+        if expand_relations:
+            expanded = self._expand_relation_context(list(fused))
+            if expanded:
+                fused = list(fused) + expanded
+
         latency_ms = int((time.perf_counter() - start) * 1000)
         run = RetrievalRun(
             query=query,
@@ -472,6 +490,53 @@ class Workspace:
             retrieval_run_id=run.id,
         )
         return result
+
+    def _expand_relation_context(self, hits: list[SearchHit]) -> list[SearchHit]:
+        """Append supplementary segments linked to entities referenced by the top hits."""
+        from geomemory.storage.repositories.entity_repo import EntityRepository
+        from geomemory.storage.repositories.segment_repo import SegmentRepository
+
+        MAX_SUPPLEMENTARY = 50
+        supplementary: list[SearchHit] = []
+        seen_segment_ids: set[str] = set(h.id for h in hits)
+
+        for hit in hits:
+            seg_id = hit.id
+            entities = EntityRepository(self.conn).get_by_evidence(seg_id)
+            for entity in entities:
+                entity_relations = self.conn.execute(
+                    "SELECT * FROM relation WHERE source_id = ? OR target_id = ?",
+                    (entity.id, entity.id),
+                ).fetchall()
+                for rel in entity_relations:
+                    other_id = (
+                        str(rel["target_id"])
+                        if str(rel["source_id"]) == entity.id
+                        else str(rel["source_id"])
+                    )
+                    rel_segments = self.conn.execute(
+                        "SELECT * FROM segment WHERE id = ?", (other_id,)
+                    ).fetchall()
+                    for seg_row in rel_segments:
+                        if seg_row["id"] not in seen_segment_ids:
+                            seen_segment_ids.add(seg_row["id"])
+                            seg = Segment._load(seg_row)
+                            supplementary.append(
+                                SearchHit(
+                                    id=seg.id,
+                                    text=seg.text or "",
+                                    metadata={**seg.metadata, "modality": "relation"},
+                                )
+                            )
+                        if len(supplementary) >= MAX_SUPPLEMENTARY:
+                            break
+                    if len(supplementary) >= MAX_SUPPLEMENTARY:
+                        break
+                if len(supplementary) >= MAX_SUPPLEMENTARY:
+                    break
+            if len(supplementary) >= MAX_SUPPLEMENTARY:
+                break
+        return supplementary
 
     def _fts_search(self, query: str, *, top_k: int, collections: list[str] | None) -> list[SearchHit]:
         """Run a FTS5 full-text query over segment text."""
@@ -954,6 +1019,66 @@ class Workspace:
     def search_images(self, query_vector: Any, *, top_k: int = 10) -> list[dict[str, Any]]:
         """Search vision-embedded raster tiles by image vector (experimental)."""
         return self.image_index().search(query_vector, top_k=top_k)
+
+    def traverse(
+        self, entity_id: str, *, depth: int = 1
+    ) -> dict[str, Any]:
+        """Return an entity with its transitive relations up to *depth* (max 3)."""
+        from geomemory.storage.repositories.entity_repo import EntityRepository
+
+        max_depth = min(depth, 3)
+        seen_relations: set[str] = set()
+        hits: list[dict[str, Any]] = []
+        total_hits = 0
+        MAX_HITS = 50
+
+        def _fetch(current_id: str, current_depth: int) -> None:
+            nonlocal total_hits
+            if current_depth > max_depth or total_hits >= MAX_HITS:
+                return
+            entity_row = self.conn.execute(
+                "SELECT * FROM entity WHERE id = ?", (current_id,)
+            ).fetchone()
+            if entity_row is None:
+                return
+            entity = EntityRepository(self.conn)._load(entity_row)
+            rows = self.conn.execute(
+                "SELECT * FROM relation WHERE source_id = ? OR target_id = ?",
+                (current_id, current_id),
+            ).fetchall()
+            for row in rows:
+                rel_id = str(row["id"])
+                if rel_id in seen_relations:
+                    continue
+                seen_relations.add(rel_id)
+                src_id, tgt_id = str(row["source_id"]), str(row["target_id"])
+                target_id = tgt_id if src_id == current_id else src_id
+                target_row = self.conn.execute(
+                    "SELECT * FROM entity WHERE id = ?", (target_id,)
+                ).fetchone()
+                target_entity = (
+                    EntityRepository(self.conn)._load(target_row).model_dump(mode="json")
+                    if target_row is not None
+                    else None
+                )
+                hits.append(
+                    {
+                        "id": rel_id,
+                        "predicate": row["predicate"],
+                        "confidence": float(row["confidence"]),
+                        "source": entity.model_dump(mode="json"),
+                        "target": target_entity,
+                    }
+                )
+                total_hits += 1
+                if total_hits < MAX_HITS:
+                    _fetch(target_id, current_depth + 1)
+
+        _fetch(entity_id, 0)
+        first_entity = None
+        if hits:
+            first_entity = hits[0]["source"]
+        return {"entity": first_entity, "relations": hits}
 
     # ── Internal helpers ────────────────────────────────────────────────────
 

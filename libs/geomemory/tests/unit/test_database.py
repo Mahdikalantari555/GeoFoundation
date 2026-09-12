@@ -116,8 +116,9 @@ class TestMigrations:
         assert 2 in applied  # raster_tile.metadata column migration
         assert 3 in applied  # spatial_index rowid fix migration
         assert 4 in applied  # candidate_memory / knowledge_change_proposal
-        assert current_version(conn) == 4
-        assert applied_versions(conn) == [1, 2, 3, 4]
+        assert 5 in applied  # entity table migration
+        assert current_version(conn) == 5
+        assert applied_versions(conn) == [1, 2, 3, 4, 5]
         conn.close()
 
     def test_migrate_idempotent(self, tmp_path):
