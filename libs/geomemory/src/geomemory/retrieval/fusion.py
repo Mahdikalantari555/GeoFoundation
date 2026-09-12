@@ -5,7 +5,13 @@ from __future__ import annotations
 from geomemory.core.models import SearchHit
 
 
-def rrf_fuse(groups: list[list[SearchHit]], *, top_n: int, k: int = 60) -> list[SearchHit]:
+def rrf_fuse(
+    groups: list[list[SearchHit]],
+    *,
+    top_n: int,
+    k: int = 60,
+    weights: list[float] | None = None,
+) -> list[SearchHit]:
     """Reciprocal Rank Fusion over multiple ranked lists.
 
     Each hit's fused score is the sum of ``1 / (k + rank + 1)`` across the
@@ -14,7 +20,12 @@ def rrf_fuse(groups: list[list[SearchHit]], *, top_n: int, k: int = 60) -> list[
     scores: dict[str, float] = {}
     by_id: dict[str, SearchHit] = {}
     seen: dict[str, set[int]] = {}
-    for group_idx, group in enumerate(groups):
+    if weights is None:
+        weights = [1.0] * len(groups)
+    if len(weights) != len(groups):
+        raise ValueError("weights must match the number of groups")
+
+    for group_idx, (group, weight) in enumerate(zip(groups, weights, strict=True)):
         for rank, hit in enumerate(group):
             key = hit.id
             if key not in by_id:
@@ -22,7 +33,7 @@ def rrf_fuse(groups: list[list[SearchHit]], *, top_n: int, k: int = 60) -> list[
                 seen[key] = set()
             if group_idx not in seen[key]:
                 seen[key].add(group_idx)
-                scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
+                scores[key] = scores.get(key, 0.0) + weight / (k + rank + 1)
     ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
     for key, score in ranked:
         by_id[key].score = score

@@ -68,6 +68,22 @@ MIGRATIONS: list[Migration] = [
             ");"
         ),
     ),
+    Migration(
+        version=5,
+        description="Add entity table for geospatial knowledge layer",
+        sql=(
+            "CREATE TABLE IF NOT EXISTS entity ("
+            "    id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL,"
+            "    workspace_id TEXT NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,"
+            "    spatial_bbox TEXT, evidence_id TEXT,"
+            "    created_at TEXT NOT NULL DEFAULT (datetime('now')),"
+            "    CHECK (kind IN ('concept','location','sensor','product','stress_type','metric'))"
+            ");"
+            "CREATE INDEX IF NOT EXISTS idx_entity_kind ON entity(kind);"
+            "CREATE INDEX IF NOT EXISTS idx_entity_workspace ON entity(workspace_id);"
+            "CREATE INDEX IF NOT EXISTS idx_entity_name ON entity(name);"
+        ),
+    ),
 ]
 
 

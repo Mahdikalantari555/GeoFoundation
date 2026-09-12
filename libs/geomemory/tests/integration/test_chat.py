@@ -27,7 +27,17 @@ class _StaticSearchService:
     def __init__(self, hits: list[SearchHit]):
         self._hits = hits
 
-    def search(self, query, *, filters=None):
+    def search(
+        self,
+        query: str,
+        *,
+        mode: str = "hybrid",
+        top_k: int = 20,
+        top_n: int = 5,
+        filters: SearchFilters | None = None,
+        modalities: str | None = None,
+        modality_weight: float = 0.7,
+    ) -> Any:
         from geomemory.core.models import QueryPlan, SearchResult
 
         return SearchResult(

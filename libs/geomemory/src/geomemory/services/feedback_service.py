@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from geomemory.core.models import DatasetExample, FeedbackEvent
 from geomemory.feedback.exporters import export_jsonl
@@ -45,12 +46,8 @@ class FeedbackService:
 
     def promote_to_candidate(self, event_ids: list[str], content: str, memory_type: str = "fact", author: str | None = None) -> Any:
         """Promote feedback events to a candidate memory with scoring."""
-        from geomemory.feedback.scoring import MemoryScorer
-
         cm = self.candidate_service.create(content, memory_type=memory_type, source_feedback_ids=event_ids, author=author)
-        scorer = MemoryScorer()
         # Simple signal: confirming count = len(event_ids)
-        score = scorer.score(confirming=len(event_ids))
         self.candidate_service.score(cm.id, {"confirming": len(event_ids)})
         updated = self.candidate_service.get(cm.id)
         return updated or cm

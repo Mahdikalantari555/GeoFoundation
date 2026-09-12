@@ -140,7 +140,6 @@ class LanceBackend:
                 matrix[index_of[rec.id]] = vec
             # For records not in this batch, keep prior vectors if available
             if self._embeddings is not None:
-                old_index = {r.id: i for i, r in enumerate(self._records)}
                 # carry over vectors for ids not in this upsert
                 # We need mapping from old records; approximate by keeping zeros for missing.
                 # Better: if we had old matrix, copy those rows.

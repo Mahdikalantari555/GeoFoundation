@@ -198,6 +198,20 @@ CREATE TABLE IF NOT EXISTS embedding_record (
 CREATE INDEX IF NOT EXISTS idx_embedding_space ON embedding_record(space_id);
 CREATE INDEX IF NOT EXISTS idx_embedding_model ON embedding_record(model_id);
 
+CREATE TABLE IF NOT EXISTS entity (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    kind         TEXT NOT NULL,
+    workspace_id TEXT NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+    spatial_bbox TEXT,
+    evidence_id  TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (kind IN ('concept', 'location', 'sensor', 'product', 'stress_type', 'metric'))
+);
+CREATE INDEX IF NOT EXISTS idx_entity_kind ON entity(kind);
+CREATE INDEX IF NOT EXISTS idx_entity_workspace ON entity(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_entity_name ON entity(name);
+
 CREATE TABLE IF NOT EXISTS relation (
     id          TEXT PRIMARY KEY,
     source_id   TEXT NOT NULL,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from typing import Any, Literal
 
 from geomemory.core.models import CandidateMemory, KnowledgeChangeProposal, utc_now
 
@@ -74,17 +75,7 @@ class ProposalEngine:
                 diff = {}
             ptype = d.get("proposal_type")
             if ptype == "graph_relation":
-                try:
-                    proposed = diff.get("proposed") if isinstance(diff, dict) else None
-                    # expected format "source -> predicate -> target" or store as relation with source/target placeholder
-                    # For now insert a generic relation if content looks structured
-                    if isinstance(proposed, str) and "->" in proposed:
-                        parts = [p.strip() for p in proposed.split("->")]
-                        if len(parts) >= 3:
-                            self.conn.execute("INSERT OR IGNORE INTO relation (id, source_id, predicate, target_id, confidence, extractor, created_at) VALUES (?,?,?,?,?,?,?)", (f"rel_{proposal_id[:8]}", parts[0], parts[1], parts[2], 0.9, "proposal", reviewed_at))
-                            self.conn.commit()
-                except Exception:
-                    pass
+                self._apply_graph_relation(diff, reviewed_at)
         # return updated
         row2 = self.conn.execute("SELECT * FROM knowledge_change_proposal WHERE id=?", (proposal_id,)).fetchone()
         if not row2:
@@ -97,3 +88,69 @@ class ProposalEngine:
                 except Exception:
                     d2[k] = [] if k != "diff" else {}
         return KnowledgeChangeProposal(**d2)
+
+    def _apply_graph_relation(self, diff: dict[str, Any], reviewed_at: str) -> None:
+        """Create/link entities and insert a relation row from an approved graph_relation proposal.
+
+        Supports both structured diff formats:
+          - {"source": "salinity", "predicate": "causes", "target": "reduced_NDVI"}
+          - Legacy string format "source -> predicate -> target"
+        """
+        source = diff.get("source") if isinstance(diff, dict) else None
+        predicate = diff.get("predicate") if isinstance(diff, dict) else None
+        target = diff.get("target") if isinstance(diff, dict) else None
+
+        # Fallback to legacy "->" string format.
+        if not source or not predicate or not target:
+            proposed = diff.get("proposed") if isinstance(diff, dict) else None
+            if isinstance(proposed, str) and "->" in proposed:
+                parts = [p.strip() for p in proposed.split("->")]
+                if len(parts) >= 3:
+                    source, predicate, target = parts[0], parts[1], " ".join(parts[2:])
+
+        if not source or not predicate or not target:
+            return
+
+        # Determine workspace_id from any existing collection.
+        ws_row = self.conn.execute(
+            "SELECT DISTINCT c.workspace_id FROM collection c LIMIT 1"
+        ).fetchone()
+        workspace_id = str(ws_row["workspace_id"]) if ws_row else ""
+
+        def _kind_for(name: str) -> Literal["concept", "location", "sensor", "product", "stress_type", "metric"]:
+            lower = name.lower()
+            if any(kw in lower for kw in ("ndvi", "evi", "savi", "lai", "metric")):
+                return "metric"
+            if any(kw in lower for kw in ("salt", "stress", "drought", "salin")):
+                return "stress_type"
+            if any(kw in lower for kw in ("khuzestan", "iran", "location", "province")):
+                return "location"
+            if any(kw in lower for kw in ("sentinel", "landsat", "modis", "sensor")):
+                return "sensor"
+            return "concept"
+
+        def upsert_entity(name: str) -> str:
+            """Return entity id — create or reuse by (name, kind)."""
+            kind = _kind_for(name)
+            existing = self.conn.execute(
+                "SELECT id FROM entity WHERE name = ? AND kind = ? AND workspace_id = ? LIMIT 1",
+                (name, kind, workspace_id),
+            ).fetchone()
+            if existing is not None:
+                return str(existing["id"])
+            from geomemory.core.models import Entity
+            e = Entity(name=name, kind=kind, workspace_id=workspace_id or None)
+            self.conn.execute(
+                "INSERT INTO entity (id, name, kind, workspace_id, created_at) VALUES (?, ?, ?, ?, ?)",
+                (e.id, e.name, e.kind, workspace_id or "", e.created_at),
+            )
+            return e.id
+
+        src_id = upsert_entity(source)
+        tgt_id = upsert_entity(target)
+        rel_id = f"rel_prop_{reviewed_at[:4]}_{len(source)}_{len(target)}".replace("-", "_")[:32]
+        self.conn.execute(
+            "INSERT OR IGNORE INTO relation (id, source_id, predicate, target_id, confidence, extractor, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (rel_id, src_id, predicate, tgt_id, 0.9, "proposal", reviewed_at),
+        )
+        self.conn.commit()

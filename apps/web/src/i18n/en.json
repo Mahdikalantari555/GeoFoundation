@@ -152,6 +152,29 @@
     "archiveConfirm": "Archive collection \"{{name}}\"? Its assets stay in the workspace.",
     "viewAssets": "View assets"
   },
+  "entities": {
+    "title": "Entities",
+    "hint": "Browse structured concepts, places, sensors, products, stresses, and metrics in the active workspace.",
+    "filter": "Kind",
+    "allKinds": "All kinds",
+    "kind": {
+      "concept": "Concept",
+      "location": "Location",
+      "sensor": "Sensor",
+      "product": "Product",
+      "stress_type": "Stress type",
+      "metric": "Metric"
+    },
+    "name": "Name",
+    "kindCol": "Kind",
+    "location": "Spatial bbox",
+    "empty": "No entities found",
+    "emptyHint": "Ingest a source or approve a graph relation to populate the knowledge layer.",
+    "closed": "Open a workspace to view entities.",
+    "relations": "Relations",
+    "relationsHint": "Direct and transitive relations for the selected entity.",
+    "noRelations": "No relations found for this entity."
+  },
   "ingest": {
     "title": "Ingest",
     "collection": "Collection",

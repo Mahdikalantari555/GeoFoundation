@@ -423,6 +423,18 @@ class EmbeddingRecord(GeoMemoryModel):
         )
 
 
+class Entity(GeoMemoryModel):
+    """Structured geospatial entity extracted from text or proposals."""
+
+    id: str = Field(default_factory=lambda: new_id("ent"))
+    name: str
+    kind: Literal["concept", "location", "sensor", "product", "stress_type", "metric"]
+    workspace_id: str | None = None
+    spatial_bbox: tuple[float, float, float, float] | None = None  # (min_lon, min_lat, max_lon, max_lat)
+    evidence_id: str | None = None
+    created_at: str = Field(default_factory=utc_now)
+
+
 class Relation(GeoMemoryModel):
     """Explicit typed relationship between two entities with evidence."""
 
@@ -529,6 +541,8 @@ class QueryPlan(GeoMemoryModel):
     top_k: int = 20
     top_n: int = 5
     filters: SearchFilters | None = None
+    modalities: Literal["text", "image", "both"] | None = None
+    modality_weight: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class SearchResult(GeoMemoryModel):
@@ -700,6 +714,9 @@ class SearchRequest(GeoMemoryModel):
     top_n: int = 5
     mode: Literal["sparse", "dense", "hybrid"] = "hybrid"
     fusion: Literal["rrf", "linear"] = "rrf"
+    expand_relations: bool = False
+    modalities: Literal["text", "image", "both"] | None = None
+    modality_weight: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class GenerationRequest(GeoMemoryModel):

@@ -14,7 +14,7 @@ def abstention_accuracy(
     expected_abstain: Iterable[bool],
 ) -> float:
     """Return the fraction of items where abstention matches expectation."""
-    pairs = list(zip(predict_abstain, expected_abstain))
+    pairs = list(zip(predict_abstain, expected_abstain, strict=True))
     if not pairs:
         return 0.0
     return sum(p == e for p, e in pairs) / len(pairs)

@@ -39,6 +39,4 @@ def time_in_range(value: str | None, from_: str | None, to: str | None) -> bool:
         return False
     if from_ is not None and value < from_:
         return False
-    if to is not None and value > to:
-        return False
-    return True
+    return not (to is not None and value > to)

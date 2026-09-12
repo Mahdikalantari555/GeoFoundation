@@ -1,6 +1,7 @@
 """Tests for the feedback pipeline: events, review queue, dedup, exporters."""
 
 from __future__ import annotations
+import json
 
 import pytest
 
@@ -129,3 +130,36 @@ class TestDedup:
         ex2 = build_dataset_example(task_type="qa_eval", question="same", answer="a")
         groups = find_duplicates([ex1, ex2])
         assert len(groups) == 1
+
+class TestProposalGraphRelation:
+    def _make_ws(self, tmp_path):
+        from geomemory import GeoMemory
+        ws = GeoMemory.create(tmp_path / "ws")
+        ws.create_collection("docs")
+        return ws
+
+    def test_approve_graph_relation_populates_entities_and_relations(self, tmp_path):
+        from geomemory import GeoMemory
+        from geomemory.feedback.proposals import ProposalEngine
+        ws = self._make_ws(tmp_path)
+        engine = ProposalEngine(ws.conn)
+        from geomemory.core.models import KnowledgeChangeProposal, CandidateMemory
+        c = CandidateMemory(content="salinity causes reduced NDVI", state="verified")
+        prop = engine.generate(c)
+        assert prop is not None
+        # Update diff to structured format
+        prop.diff = {"source": "salinity", "predicate": "causes", "target": "reduced_NDVI"}
+        ws.conn.execute(
+            "UPDATE knowledge_change_proposal SET diff=? WHERE id=?",
+            (json.dumps(prop.diff), prop.id),
+        )
+        ws.conn.commit()
+        approved = engine.review(prop.id, approve=True, reviewer_id="user1", note=None)
+        assert approved.status == "approved"
+        entities = ws.conn.execute("SELECT name, kind FROM entity ORDER BY name").fetchall()
+        names = {r["name"] for r in entities}
+        assert "salinity" in names
+        assert "reduced_NDVI" in names
+        rels = ws.conn.execute("SELECT source_id, predicate, target_id FROM relation").fetchall()
+        assert len(rels) >= 1
+        ws.close()

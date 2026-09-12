@@ -132,6 +132,8 @@ class SearchRequest(BaseModel):
     sensor: list[str] | None = None
     spatial: SpatialFilterRequest | None = None
     temporal: TemporalFilterRequest | None = None
+    modalities: Literal["text", "image", "both"] | None = None
+    modality_weight: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class AskRequest(BaseModel):
@@ -143,6 +145,8 @@ class AskRequest(BaseModel):
     sensor: list[str] | None = None
     spatial: SpatialFilterRequest | None = None
     temporal: TemporalFilterRequest | None = None
+    modalities: Literal["text", "image", "both"] | None = None
+    modality_weight: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class RunEvalRequest(BaseModel):

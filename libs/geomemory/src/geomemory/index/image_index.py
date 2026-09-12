@@ -24,7 +24,7 @@ _IDS_FILE = "ids.json"
 class ImageIndex:
     """In-memory index over image embeddings with numpy cosine search."""
 
-    space_id = "image.olmoearth.v1"
+    space_id = "image.olmoearth-nano-v12.v1"
 
     def __init__(self, *, embeddings: dict[str, np.ndarray] | None = None) -> None:
         self._embeddings: dict[str, np.ndarray] = dict(embeddings or {})
@@ -54,6 +54,12 @@ class ImageIndex:
     def count(self) -> int:
         """Return the number of indexed targets."""
         return len(self._embeddings)
+
+    def dimension(self) -> int | None:
+        """Return the embedding width, if the index contains at least one vector."""
+        if not self._embeddings:
+            return None
+        return int(next(iter(self._embeddings.values())).shape[0])
 
     def ids(self) -> list[str]:
         """Return the indexed target ids."""

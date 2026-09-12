@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from pathlib import Path
 
@@ -50,7 +51,6 @@ def reindex(
             click.echo(f"Note: collection filter '{collection}' — rebuilding all segments (collection-scoped rebuild not yet isolated).", err=True)
 
         # Detect legacy manifest
-        manifest_path = ws_path / "indexes" / space / "manifest.json"
         legacy_detected = False
         if ws_path.joinpath("indexes").exists():
             for child in (ws_path / "indexes").iterdir():
@@ -93,7 +93,5 @@ def reindex(
         click.echo(f"Reindexed {result.get('indexed', 0)} segments into {space} (provider={provider} model={model_name})")
         click.echo("Migration complete — pipdeptree should now show no torch/txtai (unless [vision]).")
     finally:
-        try:
+        with contextlib.suppress(Exception):
             ws.close()
-        except Exception:
-            pass

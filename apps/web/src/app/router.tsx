@@ -7,6 +7,7 @@ import { IndexPage } from '@/features/index/IndexPage'
 import { ReviewPage } from '@/features/feedback/ReviewPage'
 import { EvalPage } from '@/features/eval/EvalPage'
 import { CollectionsPage } from '@/features/knowledge/CollectionsPage'
+import { EntitiesPage } from '@/features/knowledge/EntitiesPage'
 import { IngestPage } from '@/features/knowledge/IngestPage'
 import { AssetsPage } from '@/features/knowledge/AssetsPage'
 import { SearchPage } from '@/features/search/SearchPage'
@@ -27,6 +28,7 @@ export const routes = [
       { path: 'settings', element: <SettingsPage /> },
       { path: 'doctor', element: <DoctorPage /> },
       { path: 'collections', element: <CollectionsPage /> },
+      { path: 'knowledge/entities', element: <EntitiesPage /> },
       { path: 'ingest', element: <IngestPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'ask', element: <AskPage /> },

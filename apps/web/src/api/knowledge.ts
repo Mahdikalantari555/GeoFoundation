@@ -58,6 +58,56 @@ export type AssetDetail = {
   observations?: Array<Record<string, unknown>>
 }
 
+export type EntityKind =
+  | 'concept'
+  | 'location'
+  | 'sensor'
+  | 'product'
+  | 'stress_type'
+  | 'metric'
+
+export type Entity = {
+  id: string
+  name: string
+  kind: EntityKind
+  workspace_id?: string | null
+  spatial_bbox?: [number, number, number, number] | null
+  evidence_id?: string | null
+  created_at?: string
+}
+
+export type EntityRelation = {
+  id: string
+  source_id?: string
+  target_id?: string
+  predicate: string
+  confidence?: number
+  source?: Entity | string | null
+  target?: Entity | string | null
+  source_entity?: Entity | string | null
+  target_entity?: Entity | string | null
+  evidence_id?: string | null
+  created_at?: string
+}
+
+type EntityListResponse = Entity[] | { entities: Entity[] }
+type EntityRelationsResponse = EntityRelation[] | { relations: EntityRelation[] }
+
+function unwrapEntities(response: EntityListResponse): Entity[] {
+  return Array.isArray(response) ? response : response.entities
+}
+
+function unwrapRelations(response: EntityRelationsResponse): EntityRelation[] {
+  return Array.isArray(response) ? response : response.relations
+}
+
+export const entitiesApi = {
+  list: (kind?: EntityKind | null) =>
+    request<EntityListResponse>(`/entities${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`).then(unwrapEntities),
+  relations: (id: string) =>
+    request<EntityRelationsResponse>(`/entities/${encodeURIComponent(id)}/relations`).then(unwrapRelations),
+}
+
 export type IngestResult = {
   asset_id?: string
   revision_id?: string
