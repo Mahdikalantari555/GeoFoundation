@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, SlidersHorizontal, ThumbsUp, ThumbsDown } from 'lucide-react'
-import type { SearchHit, SearchModality, SearchMode } from '@/api/search'
+import type { SearchHit, SearchMode } from '@/api/search'
 import { ApiError } from '@/api/client'
 import { useCollections } from '@/features/knowledge/hooks'
 import { useWorkspace } from '@/features/workspace/hooks'
