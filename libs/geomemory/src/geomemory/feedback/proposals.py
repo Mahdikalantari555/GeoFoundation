@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from typing import Any, Literal
 
 from geomemory.core.models import CandidateMemory, KnowledgeChangeProposal, utc_now
 
@@ -88,7 +89,7 @@ class ProposalEngine:
                     d2[k] = [] if k != "diff" else {}
         return KnowledgeChangeProposal(**d2)
 
-    def _apply_graph_relation(self, diff: dict, reviewed_at: str) -> None:
+    def _apply_graph_relation(self, diff: dict[str, Any], reviewed_at: str) -> None:
         """Create/link entities and insert a relation row from an approved graph_relation proposal.
 
         Supports both structured diff formats:
@@ -116,7 +117,7 @@ class ProposalEngine:
         ).fetchone()
         workspace_id = str(ws_row["workspace_id"]) if ws_row else ""
 
-        def _kind_for(name: str) -> str:
+        def _kind_for(name: str) -> Literal["concept", "location", "sensor", "product", "stress_type", "metric"]:
             lower = name.lower()
             if any(kw in lower for kw in ("ndvi", "evi", "savi", "lai", "metric")):
                 return "metric"

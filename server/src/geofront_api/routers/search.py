@@ -37,6 +37,8 @@ async def search(req: SearchRequest) -> dict[str, object]:
                 spatial=spatial,
                 temporal=temporal,
                 sensor=req.sensor,
+                modalities=req.modalities,
+                modality_weight=req.modality_weight,
             )
         except GeoMemoryError as exc:
             raise GeoFrontError(code="search_failed", message=str(exc)) from exc

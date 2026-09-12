@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from typing import Any
 
 from geomemory.core.models import Entity
@@ -19,7 +18,6 @@ class EntityRepository(BaseRepository[Entity]):
 
     def create(self, entity: Entity) -> Entity:
         """Insert an entity row. Returns the same instance."""
-        data = self._dump(entity)
         self.conn.execute(
             "INSERT INTO entity (id, name, kind, workspace_id, spatial_bbox, evidence_id, created_at) "
             "VALUES (:id, :name, :kind, :workspace_id, :spatial_bbox, :evidence_id, :created_at)",

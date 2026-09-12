@@ -55,6 +55,12 @@ class ImageIndex:
         """Return the number of indexed targets."""
         return len(self._embeddings)
 
+    def dimension(self) -> int | None:
+        """Return the embedding width, if the index contains at least one vector."""
+        if not self._embeddings:
+            return None
+        return int(next(iter(self._embeddings.values())).shape[0])
+
     def ids(self) -> list[str]:
         """Return the indexed target ids."""
         return list(self._embeddings.keys())

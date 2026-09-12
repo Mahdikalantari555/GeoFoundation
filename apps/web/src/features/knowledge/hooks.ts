@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { assetsApi, collectionsApi, ingestApi, jobsApi, type Job } from '@/api/knowledge'
+import { assetsApi, collectionsApi, entitiesApi, ingestApi, jobsApi, type EntityKind, type Job } from '@/api/knowledge'
 import { useWorkspace } from '@/features/workspace/hooks'
 
 export const knowledgeKeys = {
   collections: ['collections'] as const,
   assets: (collectionId?: string) => ['assets', collectionId ?? 'all'] as const,
   asset: (id: string) => ['asset', id] as const,
+  entities: (kind?: EntityKind | null) => ['entities', kind ?? 'all'] as const,
+  entityRelations: (id: string | null) => ['entity-relations', id ?? 'none'] as const,
   job: (id: string) => ['job', id] as const,
 }
 
@@ -51,6 +53,24 @@ export function useAssetDetail(id: string | null) {
     queryKey: knowledgeKeys.asset(id ?? 'none'),
     queryFn: () => assetsApi.inspect(id!),
     enabled: !!id,
+  })
+}
+
+export function useEntities(kind?: EntityKind | null) {
+  const { data: ws } = useWorkspace()
+  return useQuery({
+    queryKey: knowledgeKeys.entities(kind),
+    queryFn: () => entitiesApi.list(kind),
+    enabled: ws?.status === 'open',
+  })
+}
+
+export function useEntityRelations(id: string | null) {
+  const { data: ws } = useWorkspace()
+  return useQuery({
+    queryKey: knowledgeKeys.entityRelations(id),
+    queryFn: () => entitiesApi.relations(id!),
+    enabled: ws?.status === 'open' && !!id,
   })
 }
 

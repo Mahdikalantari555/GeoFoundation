@@ -105,9 +105,7 @@ def _is_header(line: str) -> bool:
     if any(line.startswith(h) for h in _HEADER_RE):
         return True
     # ALL-CAPS standalone line heuristic.
-    if line and line.isupper() and len(line) > 2 and len(line) < 120:
-        return True
-    return False
+    return bool(line and line.isupper() and 2 < len(line) < 120)
 
 
 def _split_long_section(

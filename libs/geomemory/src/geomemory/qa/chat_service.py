@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Literal
 
 from geomemory.core.exceptions import AbstentionError
 from geomemory.core.models import (
@@ -44,6 +44,8 @@ class ChatService:
         *,
         mode: str = "grounded_qa",
         filters: SearchFilters | None = None,
+        modalities: Literal["text", "image", "both"] | None = None,
+        modality_weight: float = 0.7,
     ) -> QAResult:
         """Answer a question with citations, or abstain."""
         start = time.perf_counter()
@@ -57,7 +59,12 @@ class ChatService:
             )
 
         # Retrieve.
-        result = self.search_service.search(question, filters=filters)
+        result = self.search_service.search(
+            question,
+            filters=filters,
+            modalities=modalities,
+            modality_weight=modality_weight,
+        )
         if not result.hits:
             return QAResult(
                 text="not found in selected sources",

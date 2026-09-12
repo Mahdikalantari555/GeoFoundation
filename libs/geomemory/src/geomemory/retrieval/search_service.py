@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Literal
 
 from geomemory.core.models import (
     QueryPlan,
@@ -48,41 +48,79 @@ class SearchService:
         top_k: int = 20,
         top_n: int = 5,
         filters: SearchFilters | None = None,
+        modalities: Literal["text", "image", "both"] | None = None,
+        modality_weight: float = 0.7,
     ) -> SearchResult:
         """Execute a hybrid search across the configured backends."""
         start = time.perf_counter()
         clean_query, filters = self.parser.parse(query, filters)
         intent = self.parser.detect_intent(clean_query)
+        effective_modalities = modalities or "text"
+
+        text_backends = [
+            backend
+            for backend in self.backends
+            if not _is_image_backend(backend)
+        ]
+        image_backends = [
+            backend
+            for backend in self.backends
+            if _is_image_backend(backend) and _image_backend_ready(backend)
+        ]
+        if effective_modalities == "text":
+            active_backends = text_backends
+        elif effective_modalities == "image":
+            active_backends = image_backends
+        else:
+            active_backends = [*text_backends, *image_backends]
 
         plan = QueryPlan(
             intent=intent,
             mode=mode,
-            spaces=[getattr(b, "space_id", "unknown") for b in self.backends],
+            spaces=[getattr(b, "space_id", "unknown") for b in active_backends],
             top_k=top_k,
             top_n=top_n,
             filters=filters,
+            modalities=effective_modalities,
+            modality_weight=modality_weight,
         )
 
         groups: list[list[SearchHit]] = []
-        for backend in self.backends:
+        weights: list[float] = []
+        for backend in active_backends:
+            is_image = _is_image_backend(backend)
             request = SearchRequest(
                 query=clean_query,
                 filters=filters,
                 top_k=top_k,
                 top_n=top_n,
                 mode=mode,
+                modalities=effective_modalities,
+                modality_weight=modality_weight,
             )
             hits = backend.search(request)
+            if is_image:
+                for hit in hits:
+                    hit.metadata.setdefault("modality", "image")
+            else:
+                for hit in hits:
+                    hit.metadata.setdefault("modality", "text")
             groups.append(hits)
+            weights.append(modality_weight if is_image else 1.0)
 
-        if mode == "hybrid":
-            fused = rrf_fuse(groups, top_n=top_k)
+        multimodal = effective_modalities == "both" and any(
+            _is_image_backend(backend) for backend in active_backends
+        )
+        if multimodal and mode == "linear":
+            fused = linear_fuse(groups, top_n=top_k, weights=weights)
+        elif multimodal or mode == "hybrid":
+            fused = rrf_fuse(groups, top_n=top_k, weights=weights)
         elif mode == "sparse":
             fused = groups[0] if groups else []
         elif mode == "dense":
             fused = groups[-1] if groups else []
         else:
-            fused = linear_fuse(groups, top_n=top_k)
+            fused = linear_fuse(groups, top_n=top_k, weights=weights)
 
         fused = deduplicate(fused)
         fused = enforce_diversity(fused, max_per_document=self.max_per_document)
@@ -96,7 +134,14 @@ class SearchService:
             query=clean_query,
             query_plan=plan.model_dump(),
             filters=filters.model_dump(),
-            config={"mode": mode, "top_k": top_k, "top_n": top_n, "fusion": "rrf"},
+            config={
+                "mode": mode,
+                "top_k": top_k,
+                "top_n": top_n,
+                "fusion": "linear" if mode == "linear" and multimodal else "rrf",
+                "modalities": effective_modalities,
+                "modality_weight": modality_weight,
+            },
             latency_ms=latency_ms,
         )
 
@@ -108,6 +153,19 @@ class SearchService:
             latency_ms=latency_ms,
             retrieval_run_id=run.id,
         )
+
+
+def _is_image_backend(backend: Any) -> bool:
+    """Return whether a backend belongs to the isolated vision space."""
+    return str(getattr(backend, "space_id", "")).startswith("image.")
+
+
+def _image_backend_ready(backend: Any) -> bool:
+    """Keep tiny image indexes out of multimodal fusion."""
+    try:
+        return int(backend.count()) >= 5
+    except Exception:
+        return False
 
 
 def apply_hit_filters(

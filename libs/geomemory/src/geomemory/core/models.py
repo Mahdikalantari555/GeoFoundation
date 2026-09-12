@@ -541,6 +541,8 @@ class QueryPlan(GeoMemoryModel):
     top_k: int = 20
     top_n: int = 5
     filters: SearchFilters | None = None
+    modalities: Literal["text", "image", "both"] | None = None
+    modality_weight: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class SearchResult(GeoMemoryModel):
@@ -713,6 +715,8 @@ class SearchRequest(GeoMemoryModel):
     mode: Literal["sparse", "dense", "hybrid"] = "hybrid"
     fusion: Literal["rrf", "linear"] = "rrf"
     expand_relations: bool = False
+    modalities: Literal["text", "image", "both"] | None = None
+    modality_weight: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class GenerationRequest(GeoMemoryModel):

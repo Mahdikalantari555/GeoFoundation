@@ -248,7 +248,7 @@ class IngestionPipeline:
         }
 
 
-    def _extract_entities(self, segments: "list[Segment]") -> None:
+    def _extract_entities(self, segments: list[Segment]) -> None:
         """Extract entities from segment texts and persist them (best-effort)."""
         if self.entity_extractor is None:
             return
@@ -283,7 +283,7 @@ class IngestionPipeline:
 
 
     def _persist_entity(
-        self, name: str, kind: str, bbox: "tuple[float, float, float, float] | None", evidence_id: str, workspace_id: str
+        self, name: str, kind: str, bbox: tuple[float, float, float, float] | None, evidence_id: str, workspace_id: str
     ) -> None:
         """Upsert an entity by (name, kind) and link evidence."""
         row = self.conn.execute(

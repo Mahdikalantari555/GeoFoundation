@@ -3,6 +3,7 @@ import { request } from './client'
 // ── Types (mirror the gateway /search, /ask, /feedback contracts) ───────────
 
 export type SearchMode = 'sparse' | 'dense' | 'hybrid'
+export type SearchModality = 'text' | 'image' | 'both'
 export type AskMode = 'grounded_qa' | 'research' | 'code'
 
 export type SpatialFilter = {
@@ -79,6 +80,7 @@ export type FeedbackEvent = {
 export type SearchBody = {
   query: string
   mode: SearchMode
+  modalities?: SearchModality | null
   top_n?: number
   collections?: string[] | null
   sensor?: string[] | null
@@ -89,6 +91,7 @@ export type SearchBody = {
 export type AskBody = {
   question: string
   mode?: AskMode
+  modalities?: SearchModality | null
   collections?: string[] | null
   sensor?: string[] | null
   spatial?: SpatialFilter | null

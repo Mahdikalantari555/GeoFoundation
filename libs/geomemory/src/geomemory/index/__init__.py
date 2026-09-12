@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from geomemory.index.backend import RetrievalBackend
+from geomemory.index.image_backend import ImageRetrievalBackend
 from geomemory.index.image_index import ImageIndex
 from geomemory.index.lance_backend import LanceBackend
 from geomemory.index.manifest import (
@@ -19,6 +20,7 @@ from geomemory.index.vector_backend import VectorBackend
 
 __all__ = [
     "ImageIndex",
+    "ImageRetrievalBackend",
     "LanceBackend",
     "NumpyBackend",
     "QdrantBackend",

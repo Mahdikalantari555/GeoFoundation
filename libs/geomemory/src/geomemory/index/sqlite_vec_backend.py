@@ -17,6 +17,7 @@ should fall back to :class:`NumpyBackend` and Doctor reports
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import sqlite3
@@ -48,10 +49,8 @@ def _ensure_vec_loaded(conn: sqlite3.Connection) -> None:
         ) from exc
     try:
         # enable_load_extension may be disabled in some Python builds; try anyway.
-        try:
+        with contextlib.suppress(Exception):
             conn.enable_load_extension(True)  # type: ignore[attr-defined]
-        except Exception:
-            pass
         sqlite_vec.load(conn)
     except Exception as exc:  # noqa: BLE001
         raise ImportError(f"sqlite-vec extension failed to load: {exc}") from exc
@@ -78,10 +77,8 @@ class SqliteVecBackend:
         if self._conn is None and self._db_path is not None:
             self._conn = sqlite3.connect(str(self._db_path))
             # WAL + foreign_keys similar to storage/connect.py
-            try:
+            with contextlib.suppress(Exception):
                 self._conn.execute("PRAGMA journal_mode=WAL")
-            except Exception:
-                pass
             self._owns_conn = True
 
     # ── internal helpers ─────────────────────────────────────────────────

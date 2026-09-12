@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
 from typing import Any, Protocol
@@ -107,7 +108,7 @@ class LLMEntityExtractor:
         "Text:\n---\n{text}\n---\nJSON:"
     )
 
-    def __init__(self, llm_backend=None) -> None:
+    def __init__(self, llm_backend: Any = None) -> None:
         self._llm = llm_backend
         self._rule_based = RuleBasedExtractor()
 
@@ -156,10 +157,8 @@ class LLMEntityExtractor:
             ent_bbox = None
             bb = item.get("bbox")
             if isinstance(bb, list) and len(bb) == 4:
-                try:
+                with contextlib.suppress(TypeError, ValueError):
                     ent_bbox = (float(bb[0]), float(bb[1]), float(bb[2]), float(bb[3]))
-                except (TypeError, ValueError):
-                    pass
             elif kind == "location" and bbox is not None:
                 ent_bbox = bbox
             results.append((name, kind, ent_bbox))

@@ -38,8 +38,13 @@ async def ask(req: AskRequest) -> dict[str, object]:
     async with get_state().write_lock:
         try:
             result = await run_in_threadpool(
-                ws.ask, req.question, mode=req.mode, collections=req.collections,
+                ws.ask,
+                req.question,
+                mode=req.mode,
+                collections=req.collections,
                 filters=filters,
+                modalities=req.modalities,
+                modality_weight=req.modality_weight,
             )
         except GeoMemoryError as exc:
             raise GeoFrontError(code="ask_failed", message=str(exc)) from exc

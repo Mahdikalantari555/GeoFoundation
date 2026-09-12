@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, SlidersHorizontal, ThumbsUp, ThumbsDown } from 'lucide-react'
-import type { SearchHit, SearchMode } from '@/api/search'
+import type { SearchHit, SearchModality, SearchMode } from '@/api/search'
 import { ApiError } from '@/api/client'
 import { useCollections } from '@/features/knowledge/hooks'
 import { useWorkspace } from '@/features/workspace/hooks'
@@ -10,6 +10,7 @@ import { BBoxPicker, type BBox } from './BBoxPicker'
 import { useHitFeedback, useSearch } from './hooks'
 
 const MODES: SearchMode[] = ['sparse', 'dense', 'hybrid']
+const MODALITIES: SearchModality[] = ['text', 'image', 'both']
 
 export function SearchPage() {
   const { t } = useTranslation()
@@ -18,6 +19,7 @@ export function SearchPage() {
 
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('hybrid')
+  const [modalities, setModalities] = useState<SearchModality>('text')
   const [topN, setTopN] = useState(5)
   const [showFilters, setShowFilters] = useState(false)
 

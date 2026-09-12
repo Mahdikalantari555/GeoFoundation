@@ -27,7 +27,7 @@ def evi(
     g: float = 2.5,
     c1: float = 6.0,
     c2: float = 7.5,
-    l: float = 1.0,
+    light: float = 1.0,
 ) -> np.ndarray:
     """Enhanced Vegetation Index with the standard coefficients."""
     nir = np.asarray(nir, dtype=np.float64)
@@ -35,7 +35,7 @@ def evi(
     blue = np.asarray(blue, dtype=np.float64)
     _check_shapes(nir, red, "EVI")
     _check_shapes(nir, blue, "EVI")
-    denominator = nir + c1 * red - c2 * blue + l
+    denominator = nir + c1 * red - c2 * blue + light
     out = np.full_like(denominator, np.nan)
     np.divide(g * (nir - red), denominator, out=out, where=denominator != 0)
     return out
